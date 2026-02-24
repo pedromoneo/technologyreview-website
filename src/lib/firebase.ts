@@ -3,12 +3,12 @@ import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
-    projectId: "techreview-mgz-1771952",
-    appId: "1:275051155887:web:028533722e7d0f9b60df5a",
-    storageBucket: "techreview-mgz-1771952.firebasestorage.app",
-    apiKey: "AIzaSyCeerOm4520rzxGR7vs21L-qJNL0zO8qj4",
-    authDomain: "techreview-mgz-1771952.firebaseapp.com",
-    messagingSenderId: "275051155887",
+    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+    authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+    messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
 };
 
 // Initialize Firebase

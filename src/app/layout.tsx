@@ -15,6 +15,8 @@ export const metadata: Metadata = {
   description: "La edición en español de la publicación del MIT. Analizamos las tecnologías emergentes y su impacto en los negocios y la sociedad.",
 };
 
+import { AuthProvider } from "@/lib/auth-context";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -23,7 +25,9 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body className={`${inter.variable} antialiased`}>
-        {children}
+        <AuthProvider>
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );

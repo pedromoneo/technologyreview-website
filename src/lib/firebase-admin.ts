@@ -3,7 +3,7 @@ import * as admin from 'firebase-admin';
 if (!admin.apps.length) {
     admin.initializeApp({
         credential: admin.credential.applicationDefault(),
-        projectId: 'techreview-mgz-1771952',
+        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
     });
 }
 
