@@ -10,7 +10,7 @@ interface ArticleCardProps {
 export default function ArticleCard({ article, featured = false }: ArticleCardProps) {
     if (featured) {
         return (
-            <div className="group relative overflow-hidden bg-primary text-white flex flex-col md:flex-row min-h-[500px]">
+            <Link href={`/articulos/${article.id}`} className="group relative overflow-hidden bg-primary text-white flex flex-col md:flex-row min-h-[500px] hover:bg-black transition-colors">
                 {/* Image Container */}
                 <div className="relative w-full md:w-1/2 h-80 md:h-[600px] overflow-hidden">
                     <Image
@@ -37,11 +37,8 @@ export default function ArticleCard({ article, featured = false }: ArticleCardPr
                         <span className="opacity-30">•</span>
                         <span>{article.readingTime} de lectura</span>
                     </div>
-                    <Link href={`/articulos/${article.id}`} className="mt-12 self-start bg-transparent border-b-2 border-accent text-accent pb-1 font-black text-xs uppercase tracking-[0.2em] hover:text-white hover:border-white transition-all">
-                        Leer más →
-                    </Link>
                 </div>
-            </div>
+            </Link>
         );
     }
 

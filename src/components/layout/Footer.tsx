@@ -29,9 +29,9 @@ export default function Footer() {
                         <div className="mt-12 space-y-4">
                             <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Legal</h4>
                             <div className="flex flex-wrap gap-x-6 gap-y-2 text-[10px] font-black uppercase tracking-widest text-white/40">
-                                <Link href="/legal" className="hover:text-accent transition-colors">Términos y Condiciones</Link>
-                                <Link href="/privacidad" className="hover:text-accent transition-colors">Política de Privacidad</Link>
-                                <Link href="/cookies" className="hover:text-accent transition-colors">Cookies</Link>
+                                <Link href="#" className="hover:text-accent transition-colors">Términos y Condiciones</Link>
+                                <Link href="#" className="hover:text-accent transition-colors">Política de Privacidad</Link>
+                                <Link href="#" className="hover:text-accent transition-colors">Cookies</Link>
                             </div>
                         </div>
                     </div>
@@ -40,11 +40,11 @@ export default function Footer() {
                     <div className="lg:col-span-2">
                         <h3 className="text-[11px] font-black uppercase tracking-[0.2em] mb-10 text-gray-500">Secciones</h3>
                         <ul className="space-y-5 text-xs text-white/60 font-black uppercase tracking-widest">
-                            <li><Link href="/temas" className="hover:text-accent transition-colors">Temas</Link></li>
-                            <li><Link href="/informes" className="hover:text-accent transition-colors">Informes</Link></li>
-                            <li><Link href="/eventos" className="hover:text-accent transition-colors">Eventos</Link></li>
-                            <li><Link href="/podcast" className="hover:text-accent transition-colors">Podcast</Link></li>
-                            <li><Link href="/nosotros" className="hover:text-accent transition-colors">Nosotros</Link></li>
+                            <li><Link href="#" className="hover:text-accent transition-colors">Temas</Link></li>
+                            <li><Link href="#" className="hover:text-accent transition-colors">Informes</Link></li>
+                            <li><Link href="#" className="hover:text-accent transition-colors">Eventos</Link></li>
+                            <li><Link href="#" className="hover:text-accent transition-colors">Podcast</Link></li>
+                            <li><Link href="#" className="hover:text-accent transition-colors">Nosotros</Link></li>
                         </ul>
                     </div>
 
@@ -57,11 +57,11 @@ export default function Footer() {
 
                         <div className="flex space-x-4">
                             {[
-                                { icon: Linkedin, href: "#" },
-                                { icon: Instagram, href: "#" },
-                                { icon: Twitter, href: "#" },
-                                { icon: Facebook, href: "#" },
-                                { icon: Mail, href: "#" }
+                                { icon: Linkedin, href: "https://www.linkedin.com/company/2995330" },
+                                { icon: Instagram, href: "https://www.instagram.com/technologyreviewes/" },
+                                { icon: Twitter, href: "https://bsky.app/profile/technologyreviewes.bsky.social" },
+                                { icon: Facebook, href: "https://www.facebook.com/technologyreview.es" },
+                                { icon: Mail, href: "mailto:technologyreview@opinno.com" }
                             ].map((social, i) => (
                                 <Link key={i} href={social.href} className="w-10 h-10 border border-white/20 rounded-full flex items-center justify-center hover:bg-white hover:text-black transition-all">
                                     <social.icon className="w-4 h-4" />

@@ -52,7 +52,7 @@ export default function Navbar() {
                         <Link href="/suscribirse" className="hidden sm:block bg-accent text-primary text-[10px] font-black px-6 py-2.5 uppercase tracking-widest hover:bg-primary hover:text-white transition-all">
                             Suscríbete
                         </Link>
-                        <button className="p-2 hover:bg-gray-100 rounded-full transition-colors order-last">
+                        <button onClick={() => alert("Búsqueda próximamente...")} className="p-2 hover:bg-gray-100 rounded-full transition-colors order-last">
                             <Search className="w-5 h-5 text-primary" />
                         </button>
                         <Link href="/admin" className="hidden md:block p-2 hover:bg-gray-100 rounded-full transition-colors">
