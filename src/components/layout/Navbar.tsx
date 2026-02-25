@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Search, User, X, ChevronDown } from "lucide-react";
+import { Search, User, X, ChevronDown, Menu } from "lucide-react";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -11,6 +11,7 @@ import { doc, getDoc } from "firebase/firestore";
 export default function Navbar() {
     const [isScrolled, setIsScrolled] = useState(false);
     const [isSearchOpen, setIsSearchOpen] = useState(false);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const router = useRouter();
 
@@ -57,10 +58,17 @@ export default function Navbar() {
                 } border-b border-gray-100`}>
                 <div className="container mx-auto px-6 h-full">
                     <div className="grid grid-cols-3 items-center h-full">
-                        {/* Left: Logo */}
-                        <div className="flex items-center">
+                        {/* Left: Menu & Logo */}
+                        <div className="flex items-center space-x-4">
+                            <button
+                                onClick={() => setIsMenuOpen(true)}
+                                className="lg:hidden p-2 hover:bg-gray-100 rounded-full transition-colors"
+                                aria-label="Menú"
+                            >
+                                <Menu className="w-6 h-6 text-primary" />
+                            </button>
                             <Link href="/" className="flex items-center">
-                                <div className={`relative transition-all duration-500 ${isScrolled ? "h-8 w-48 md:w-56" : "h-10 md:h-12 w-64 md:w-80"}`}>
+                                <div className={`relative transition-all duration-500 ${isScrolled ? "h-8 w-40 md:w-56" : "h-10 md:h-12 w-48 md:w-80"}`}>
                                     <Image
                                         src="/logo.png"
                                         alt="MIT Technology Review"
@@ -170,6 +178,77 @@ export default function Navbar() {
                             </div>
                         </div>
                     </form>
+                </div>
+            </div>
+            {/* Mobile Menu Overlay */}
+            <div className={`fixed inset-0 z-[150] lg:hidden transition-all duration-500 ${isMenuOpen ? "visible" : "invisible"}`}>
+                {/* Backdrop */}
+                <div
+                    className={`absolute inset-0 bg-primary/20 backdrop-blur-sm transition-opacity duration-500 ${isMenuOpen ? "opacity-100" : "opacity-0"}`}
+                    onClick={() => setIsMenuOpen(false)}
+                />
+
+                {/* Menu Content */}
+                <div className={`absolute top-0 left-0 bottom-0 w-[80%] max-w-sm bg-white shadow-2xl transition-transform duration-500 ease-out flex flex-col ${isMenuOpen ? "translate-x-0" : "-translate-x-full"}`}>
+                    <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+                        <div className="relative h-6 w-32">
+                            <Image src="/logo.png" alt="Logo" fill className="object-contain object-left" />
+                        </div>
+                        <button onClick={() => setIsMenuOpen(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                            <X className="w-6 h-6 text-primary" />
+                        </button>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto py-8 px-6">
+                        <div className="space-y-8">
+                            <div>
+                                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-accent mb-6">Explorar Temas</h3>
+                                <div className="grid grid-cols-1 gap-2">
+                                    {topics.map(topic => (
+                                        <Link
+                                            key={topic}
+                                            href={`/temas/${topic.toLowerCase().replace(/\s/g, "-")}`}
+                                            onClick={() => setIsMenuOpen(false)}
+                                            className="py-3 text-lg font-black italic tracking-tighter uppercase text-primary border-b border-gray-50 flex items-center justify-between group"
+                                        >
+                                            {topic}
+                                            <ChevronDown className="w-4 h-4 -rotate-90 text-gray-200 group-hover:text-accent transition-colors" />
+                                        </Link>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div>
+                                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-accent mb-6">Secciones</h3>
+                                <div className="space-y-4">
+                                    <Link
+                                        href="/temas/informes"
+                                        onClick={() => setIsMenuOpen(false)}
+                                        className="block text-sm font-black uppercase tracking-widest text-gray-400 hover:text-primary transition-colors"
+                                    >
+                                        Informes
+                                    </Link>
+                                    <Link
+                                        href="/temas/eventos"
+                                        onClick={() => setIsMenuOpen(false)}
+                                        className="block text-sm font-black uppercase tracking-widest text-gray-400 hover:text-primary transition-colors"
+                                    >
+                                        Eventos
+                                    </Link>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="p-6 bg-gray-50 border-t border-gray-100">
+                        <Link
+                            href="/suscribirse"
+                            onClick={() => setIsMenuOpen(false)}
+                            className="block w-full bg-primary text-white text-center py-4 rounded-xl text-xs font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:bg-accent hover:text-primary transition-all active:scale-95"
+                        >
+                            Suscríbete ahora
+                        </Link>
+                    </div>
                 </div>
             </div>
         </>
