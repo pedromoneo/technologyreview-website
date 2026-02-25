@@ -2,30 +2,47 @@
 
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
-import { collection, getDocs, query, orderBy, limit } from "firebase/firestore";
-import { Plus, Search, Filter, MoreVertical, Edit, Trash2, Eye } from "lucide-react";
+import { collection, getDocs, query, orderBy, limit, deleteDoc, doc } from "firebase/firestore";
+import { Plus, Search, Filter, Edit, Trash2, Eye } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
 export default function AdminPostsPage() {
     const [articles, setArticles] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    async function fetchArticles() {
+        try {
+            setLoading(true);
+            const q = query(collection(db, "articles"), orderBy("migratedAt", "desc"), limit(20));
+            const snapshot = await getDocs(q);
+            const fetchedArticles = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+            setArticles(fetchedArticles);
+        } catch (error) {
+            console.error("Error fetching articles:", error);
+        } finally {
+            setLoading(false);
+        }
+    }
 
     useEffect(() => {
-        async function fetchArticles() {
-            try {
-                const q = query(collection(db, "articles"), orderBy("migratedAt", "desc"), limit(20));
-                const snapshot = await getDocs(q);
-                const fetchedArticles = snapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                }));
-                setArticles(fetchedArticles);
-            } catch (error) {
-                console.error("Error fetching articles:", error);
-            }
-        }
         fetchArticles();
     }, []);
+
+    const handleDelete = async (id: string, title: string) => {
+        if (window.confirm(`¿Estás seguro de que quieres eliminar "${title}"?`)) {
+            try {
+                await deleteDoc(doc(db, "articles", id));
+                setArticles(articles.filter(a => a.id !== id));
+            } catch (error) {
+                console.error("Error deleting article:", error);
+                alert("Error al eliminar el artículo");
+            }
+        }
+    };
 
     return (
         <div className="p-12 space-y-12">
@@ -35,10 +52,10 @@ export default function AdminPostsPage() {
                     <p className="text-gray-400 font-bold uppercase tracking-widest text-xs mt-2">Gestiona las historias publicadas</p>
                 </div>
 
-                <button className="bg-primary text-white px-8 py-3.5 rounded-xl font-black text-xs uppercase tracking-widest flex items-center shadow-lg shadow-primary/20 hover:bg-accent hover:text-primary transition-all active:scale-95 group">
+                <Link href="/admin/posts/new" className="bg-primary text-white px-8 py-3.5 rounded-xl font-black text-xs uppercase tracking-widest flex items-center shadow-lg shadow-primary/20 hover:bg-accent hover:text-primary transition-all active:scale-95 group">
                     <Plus className="w-4 h-4 mr-2 group-hover:rotate-90 transition-transform" />
                     Nuevo Artículo
-                </button>
+                </Link>
             </div>
 
             <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden">
@@ -116,10 +133,13 @@ export default function AdminPostsPage() {
                                             <Link href={`/articulos/${article.id}`} target="_blank" className="p-2.5 hover:bg-primary/5 rounded-xl transition-colors group/icon">
                                                 <Eye className="w-4 h-4 text-gray-400 group-hover/icon:text-primary" />
                                             </Link>
-                                            <button className="p-2.5 hover:bg-primary/5 rounded-xl transition-colors group/icon">
+                                            <Link href={`/admin/posts/edit/${article.id}`} className="p-2.5 hover:bg-primary/5 rounded-xl transition-colors group/icon">
                                                 <Edit className="w-4 h-4 text-gray-400 group-hover/icon:text-primary" />
-                                            </button>
-                                            <button className="p-2.5 hover:bg-rose-50 rounded-xl transition-colors group/icon">
+                                            </Link>
+                                            <button
+                                                onClick={() => handleDelete(article.id, article.title)}
+                                                className="p-2.5 hover:bg-rose-50 rounded-xl transition-colors group/icon"
+                                            >
                                                 <Trash2 className="w-4 h-4 text-gray-400 group-hover/icon:text-rose-500" />
                                             </button>
                                         </div>

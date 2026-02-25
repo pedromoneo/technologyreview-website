@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { Clock, User, Share2, Facebook, Twitter, Linkedin, ArrowLeft } from "lucide-react";
+import { cleanContent } from "@/lib/content-utils";
 
 export const revalidate = 60; // 1 minute revalidation
 
@@ -122,12 +123,12 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
 
                         <div className="prose prose-xl prose-primary max-w-none">
                             <p className="text-2xl font-bold leading-relaxed text-gray-600 mb-10 border-l-4 border-accent pl-8 italic">
-                                {article.excerpt}
+                                {article.excerpt.replace(/rnrn/g, ' ').replace(/rn/g, ' ').replace(/\\_/g, ' ')}
                             </p>
 
                             <div
-                                className="space-y-8 text-gray-800 text-lg leading-loose font-medium"
-                                dangerouslySetInnerHTML={{ __html: article.content }}
+                                className="space-y-8 text-gray-800 text-lg leading-loose font-medium article-content"
+                                dangerouslySetInnerHTML={{ __html: cleanContent(article.content) }}
                             />
                         </div>
 

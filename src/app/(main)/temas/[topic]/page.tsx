@@ -6,10 +6,12 @@ export const revalidate = 60;
 
 interface TopicPageProps {
     params: Promise<{ topic: string }>;
+    searchParams: Promise<{ q?: string }>;
 }
 
-export default async function TopicPage({ params }: TopicPageProps) {
+export default async function TopicPage({ params, searchParams }: TopicPageProps) {
     const { topic } = await params;
+    const { q } = await searchParams;
 
     if (!db) {
         console.error("Database not initialized");
@@ -17,8 +19,7 @@ export default async function TopicPage({ params }: TopicPageProps) {
     }
 
     const snapshot = await db.collection("articles")
-        .orderBy("migratedAt", "desc")
-        .limit(500)
+        .limit(1000)
         .get();
 
     const allArticles = snapshot.docs.map(doc => {
@@ -27,34 +28,43 @@ export default async function TopicPage({ params }: TopicPageProps) {
             id: doc.id,
             title: data.title || "",
             excerpt: data.excerpt || "",
+            content: data.content || "",
             category: data.category || "General",
+            tags: data.tags || [],
             author: data.author || "Redacción",
             date: data.date || "",
             readingTime: data.readingTime || "1 min",
             imageUrl: data.imageUrl || "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&q=80&w=800",
+            migratedAt: data.migratedAt ? (data.migratedAt.toDate ? data.migratedAt.toDate() : new Date(data.migratedAt)) : new Date(0),
         };
-    });
+    }).sort((a, b) => b.migratedAt.getTime() - a.migratedAt.getTime());
 
-    const readableTopic = topic.split("-").join(" ");
+    let filteredArticles = [];
+    let topicDisplay = "";
 
-    const filteredArticles = allArticles.filter(
-        (article) => article.category.toLowerCase() === readableTopic.toLowerCase()
-    );
+    const readableTopic = topic === "busqueda" ? "Búsqueda" : topic.split("-").join(" ");
+    topicDisplay = readableTopic.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 
-    if (filteredArticles.length === 0) {
-        const flexibleArticles = allArticles.filter(
-            (article) => article.category.toLowerCase().includes(readableTopic.toLowerCase()) ||
-                readableTopic.toLowerCase().includes(article.category.toLowerCase())
+    if (topic === "busqueda" && q) {
+        const query = q.toLowerCase();
+        filteredArticles = allArticles.filter(article =>
+            article.title?.toLowerCase().includes(query) ||
+            article.excerpt?.toLowerCase().includes(query) ||
+            article.content?.toLowerCase().includes(query) ||
+            article.category?.toLowerCase().includes(query) ||
+            (article.tags && Array.isArray(article.tags) && article.tags.some((tag: string) => tag.toLowerCase().includes(query)))
         );
-
-        if (flexibleArticles.length === 0) {
-            return notFound();
-        }
-
-        return renderTopicPage(topic, flexibleArticles);
+        topicDisplay = `Resultados para: ${q}`;
+    } else {
+        filteredArticles = allArticles.filter(
+            (article) =>
+                (article.category && article.category.toLowerCase() === readableTopic.toLowerCase()) ||
+                (article.category && article.category.toLowerCase().replace(/\s/g, "-") === topic.toLowerCase()) ||
+                (article.tags && Array.isArray(article.tags) && article.tags.some((tag: string) => tag.toLowerCase() === readableTopic.toLowerCase()))
+        );
     }
 
-    return renderTopicPage(topic, filteredArticles);
+    return renderTopicPage(topicDisplay, filteredArticles);
 }
 
 function renderTopicPage(topic: string, articles: any[]) {

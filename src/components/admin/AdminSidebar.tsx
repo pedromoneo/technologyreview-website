@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
     LayoutDashboard,
     FileText,
+    BookOpen,
     Layers,
     Users,
     Settings,
@@ -17,13 +18,34 @@ export default function AdminSidebar() {
     const pathname = usePathname();
     const { logout, user } = useAuth();
 
-    const menuItems = [
+    const mainItems = [
         { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
         { label: "Artículos", href: "/admin/posts", icon: FileText },
-        { label: "Temas", href: "/admin/topics", icon: Layers },
-        { label: "Usuarios", href: "/admin/users", icon: Users },
-        { label: "Ajustes", href: "/admin/settings", icon: Settings },
+        { label: "Estudios", href: "/admin/estudios", icon: BookOpen },
+        { label: "Páginas", href: "/admin/pages", icon: Layers },
     ];
+
+    const settingsItems = [
+        { label: "Ajustes", href: "/admin/settings", icon: Settings },
+        { label: "Usuarios", href: "/admin/users", icon: Users },
+    ];
+
+    const NavItem = ({ item }: { item: typeof mainItems[0] }) => {
+        const isActive = pathname === item.href;
+        return (
+            <Link
+                key={item.href}
+                href={item.href}
+                className={`flex items-center space-x-4 px-6 py-4 rounded-xl transition-all duration-300 group ${isActive
+                    ? "bg-accent text-primary shadow-lg shadow-accent/10"
+                    : "text-gray-400 hover:text-white hover:bg-white/5"
+                    }`}
+            >
+                <item.icon className={`w-5 h-5 ${isActive ? "text-primary" : "group-hover:scale-110 transition-transform"}`} />
+                <span className="text-sm font-black uppercase tracking-widest">{item.label}</span>
+            </Link>
+        );
+    };
 
     return (
         <aside className="w-72 bg-primary text-white flex flex-col fixed h-full z-40">
@@ -39,35 +61,32 @@ export default function AdminSidebar() {
                 </Link>
             </div>
 
-            <nav className="flex-1 px-4 py-8 space-y-2">
-                {menuItems.map((item) => {
-                    const isActive = pathname === item.href;
-                    return (
-                        <Link
-                            key={item.href}
-                            href={item.href}
-                            className={`flex items-center space-x-4 px-6 py-4 rounded-xl transition-all duration-300 group ${isActive
-                                    ? "bg-accent text-primary shadow-lg shadow-accent/10"
-                                    : "text-gray-400 hover:text-white hover:bg-white/5"
-                                }`}
-                        >
-                            <item.icon className={`w-5 h-5 ${isActive ? "text-primary" : "group-hover:scale-110 transition-transform"}`} />
-                            <span className="text-sm font-black uppercase tracking-widest">{item.label}</span>
-                        </Link>
-                    );
-                })}
+            <div className="flex-1 flex flex-col justify-between py-8">
+                <nav className="px-4 space-y-2">
+                    <p className="px-6 text-[9px] font-black text-white/20 uppercase tracking-[0.3em] mb-4">Principal</p>
+                    {mainItems.map((item) => (
+                        <NavItem key={item.href} item={item} />
+                    ))}
+                </nav>
 
-                <div className="pt-8 mt-8 border-t border-white/5">
-                    <Link
-                        href="/"
-                        target="_blank"
-                        className="flex items-center space-x-4 px-6 py-4 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition-all group"
-                    >
-                        <ExternalLink className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                        <span className="text-sm font-black uppercase tracking-widest">Ver Sitio Web</span>
-                    </Link>
-                </div>
-            </nav>
+                <nav className="px-4 space-y-2">
+                    <p className="px-6 text-[9px] font-black text-white/20 uppercase tracking-[0.3em] mb-4">Configuración</p>
+                    {settingsItems.map((item) => (
+                        <NavItem key={item.href} item={item} />
+                    ))}
+
+                    <div className="pt-8 mt-8 border-t border-white/5">
+                        <Link
+                            href="/"
+                            target="_blank"
+                            className="flex items-center space-x-4 px-6 py-4 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition-all group"
+                        >
+                            <ExternalLink className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                            <span className="text-sm font-black uppercase tracking-widest">Ver Sitio Web</span>
+                        </Link>
+                    </div>
+                </nav>
+            </div>
 
             <div className="p-6 mt-auto">
                 <div className="p-6 bg-white/5 rounded-2xl flex items-center space-x-4 mb-4">

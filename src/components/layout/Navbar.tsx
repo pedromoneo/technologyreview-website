@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { Search, User, X } from "lucide-react";
+import { Search, User, X, ChevronDown } from "lucide-react";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { db } from "@/lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
 
 export default function Navbar() {
     const [isScrolled, setIsScrolled] = useState(false);
@@ -12,13 +14,8 @@ export default function Navbar() {
     const [searchQuery, setSearchQuery] = useState("");
     const router = useRouter();
 
-    useEffect(() => {
-        const handleScroll = () => {
-            setIsScrolled(window.scrollY > 20);
-        };
-        window.addEventListener("scroll", handleScroll);
-        return () => window.removeEventListener("scroll", handleScroll);
-    }, []);
+    const [topics, setTopics] = useState<string[]>([]);
+    const [isTemasOpen, setIsTemasOpen] = useState(false);
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
@@ -28,6 +25,31 @@ export default function Navbar() {
             setSearchQuery("");
         }
     };
+
+    useEffect(() => {
+        const handleScroll = () => {
+            setIsScrolled(window.scrollY > 20);
+        };
+        window.addEventListener("scroll", handleScroll);
+
+        // Fetch categories from settings
+        const fetchCategories = async () => {
+            try {
+                const docRef = doc(db, "settings", "categories");
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    setTopics(docSnap.data().list || []);
+                } else {
+                    setTopics(["Inteligencia Artificial", "Biotecnología", "Energía", "Espacio", "Sostenibilidad", "Negocios"]);
+                }
+            } catch (error) {
+                console.error("Error fetching categories for navbar:", error);
+            }
+        };
+        fetchCategories();
+
+        return () => window.removeEventListener("scroll", handleScroll);
+    }, []);
 
     return (
         <>
@@ -53,15 +75,33 @@ export default function Navbar() {
                         {/* Middle: Navigation Items */}
                         <div className="flex justify-center items-center h-full">
                             <div className="hidden lg:flex items-center space-x-12 text-[11px] font-black uppercase tracking-[0.2em] text-gray-400">
-                                {[
-                                    { name: "Temas", href: "/temas/inteligencia-artificial" },
-                                    { name: "Informes", href: "#" },
-                                    { name: "Eventos", href: "#" }
-                                ].map((item) => (
-                                    <Link key={item.name} href={item.href} className="hover:text-primary transition-colors">
-                                        {item.name}
+                                <div
+                                    className="relative group h-full flex items-center"
+                                    onMouseEnter={() => setIsTemasOpen(true)}
+                                    onMouseLeave={() => setIsTemasOpen(false)}
+                                >
+                                    <Link href="/temas" className="hover:text-primary transition-colors flex items-center py-2">
+                                        Temas
+                                        <ChevronDown className={`w-3 h-3 ml-2 transition-transform duration-300 ${isTemasOpen ? "rotate-180" : ""}`} />
                                     </Link>
-                                ))}
+
+                                    {/* Dropdown Menu */}
+                                    <div className={`absolute top-full left-1/2 -translate-x-1/2 w-64 bg-white border border-gray-100 shadow-2xl rounded-2xl py-6 transition-all duration-300 ${isTemasOpen ? "opacity-100 visible translate-y-0" : "opacity-0 invisible -translate-y-4"}`}>
+                                        <div className="grid grid-cols-1 gap-1 px-4">
+                                            {topics.map(topic => (
+                                                <Link
+                                                    key={topic}
+                                                    href={`/temas/${topic.toLowerCase().replace(/\s/g, "-")}`}
+                                                    className="px-4 py-2.5 hover:bg-gray-50 rounded-xl transition-colors text-gray-400 hover:text-primary block font-black uppercase tracking-widest text-[10px]"
+                                                >
+                                                    {topic}
+                                                </Link>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                                <Link href="/temas/informes" className="hover:text-primary transition-colors">Informes</Link>
+                                <Link href="/temas/eventos" className="hover:text-primary transition-colors">Eventos</Link>
                             </div>
                         </div>
 

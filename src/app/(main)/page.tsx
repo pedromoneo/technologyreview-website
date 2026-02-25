@@ -37,6 +37,10 @@ export default async function Home() {
   const featuredArticle = articles[0] || null;
   const latestArticles = articles.slice(1);
 
+  // Fetch categories for sidebar
+  const categoriesSnap = await db.collection("settings").doc("categories").get();
+  const sideTopics = categoriesSnap.exists ? (categoriesSnap.data()?.list || []) : ["Inteligencia Artificial", "Biotecnología", "Energía", "Espacio", "Sostenibilidad", "Negocios"];
+
   return (
     <div className="flex flex-col pt-28">
       {/* Hero Section - The Split Hero */}
@@ -57,7 +61,7 @@ export default async function Home() {
                 </h3>
               </div>
               <ul className="space-y-6">
-                {["Inteligencia Artificial", "Computación", "Biotecnología", "Energía", "Espacio", "Sostenibilidad", "Sociedad"].map((topic) => (
+                {(sideTopics as string[]).map((topic) => (
                   <li key={topic}>
                     <Link href={`/temas/${topic.toLowerCase().replace(/\s/g, "-")}`} className="group flex items-center text-sm font-black text-gray-400 hover:text-primary transition-colors uppercase tracking-widest">
                       <span className="w-0 group-hover:w-4 h-[1px] bg-primary mr-0 group-hover:mr-2 transition-all" />
