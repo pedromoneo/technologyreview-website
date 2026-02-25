@@ -40,3 +40,9 @@ next-env.d.ts
 
 # firebase
 .firebase/
+
+# backup data
+/backup_data/
+
+# service accounts
+service-account.json

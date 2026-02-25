@@ -13,6 +13,9 @@ export const metadata: Metadata = {
     default: "MIT Technology Review en español | La revista de tecnología del MIT",
   },
   description: "La edición en español de la publicación del MIT. Analizamos las tecnologías emergentes y su impacto en los negocios y la sociedad.",
+  icons: {
+    icon: '/favicon.png',
+  },
 };
 
 import { AuthProvider } from "@/lib/auth-context";

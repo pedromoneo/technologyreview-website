@@ -1,6 +1,8 @@
-import { MOCK_ARTICLES } from "@/data/mock-articles";
+import { db } from "@/lib/firebase-admin";
 import ArticleCard from "@/components/home/ArticleCard";
 import { notFound } from "next/navigation";
+
+export const revalidate = 60;
 
 interface TopicPageProps {
     params: Promise<{ topic: string }>;
@@ -9,16 +11,33 @@ interface TopicPageProps {
 export default async function TopicPage({ params }: TopicPageProps) {
     const { topic } = await params;
 
-    // Convert slug to readable name (e.g., 'inteligencia-artificial' -> 'Inteligencia artificial')
+    const snapshot = await db.collection("articles")
+        .orderBy("migratedAt", "desc")
+        .limit(500)
+        .get();
+
+    const allArticles = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+            id: doc.id,
+            title: data.title || "",
+            excerpt: data.excerpt || "",
+            category: data.category || "General",
+            author: data.author || "Redacción",
+            date: data.date || "",
+            readingTime: data.readingTime || "1 min",
+            imageUrl: data.imageUrl || "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&q=80&w=800",
+        };
+    });
+
     const readableTopic = topic.split("-").join(" ");
 
-    const filteredArticles = MOCK_ARTICLES.filter(
+    const filteredArticles = allArticles.filter(
         (article) => article.category.toLowerCase() === readableTopic.toLowerCase()
     );
 
     if (filteredArticles.length === 0) {
-        // Try a more flexible match for edge cases
-        const flexibleArticles = MOCK_ARTICLES.filter(
+        const flexibleArticles = allArticles.filter(
             (article) => article.category.toLowerCase().includes(readableTopic.toLowerCase()) ||
                 readableTopic.toLowerCase().includes(article.category.toLowerCase())
         );

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Search, Menu, User } from "lucide-react";
+import Image from "next/image";
 import { useState, useEffect } from "react";
 
 export default function Navbar() {
@@ -20,37 +21,33 @@ export default function Navbar() {
             } border-b border-gray-100`}>
             <div className="container mx-auto px-6 h-full">
                 <div className="grid grid-cols-3 items-center h-full">
-                    {/* Left Actions / Menu */}
-                    <div className="flex items-center space-x-8">
-                        <button className="flex items-center space-x-2 group">
-                            <Menu className="w-6 h-6 text-primary group-hover:text-accent transition-colors" />
-                            <span className="hidden md:block text-[11px] font-black uppercase tracking-[0.2em]">Menú</span>
-                        </button>
+                    {/* Left: Logo */}
+                    <div className="flex items-center">
+                        <Link href="/" className="flex items-center">
+                            <div className={`relative transition-all duration-500 ${isScrolled ? "h-8 w-48 md:w-56" : "h-10 md:h-12 w-64 md:w-80"}`}>
+                                <Image
+                                    src="/logo.png"
+                                    alt="MIT Technology Review"
+                                    fill
+                                    className="object-contain object-left"
+                                    priority
+                                />
+                            </div>
+                        </Link>
+                    </div>
 
-                        <div className="hidden lg:flex items-center space-x-6 text-[11px] font-black uppercase tracking-widest text-gray-400">
+                    {/* Middle: Navigation Items */}
+                    <div className="flex justify-center items-center h-full">
+                        <div className="hidden lg:flex items-center space-x-12 text-[11px] font-black uppercase tracking-[0.2em] text-gray-400">
                             {["Temas", "Informes", "Eventos"].map((item) => (
-                                <Link key={item} href={`/${item.toLowerCase()}`} className="hover:text-primary transition-colors">
+                                <Link key={item} href="#" className="hover:text-primary transition-colors cursor-default">
                                     {item}
                                 </Link>
                             ))}
                         </div>
                     </div>
 
-                    {/* Centered Logo Section */}
-                    <div className="flex flex-col items-center group cursor-pointer">
-                        <Link href="/" className="flex flex-col items-center">
-                            <h1 className={`font-black tracking-tighter text-primary transition-all duration-500 leading-none ${isScrolled ? "text-xl md:text-2xl" : "text-2xl md:text-3xl"
-                                }`}>
-                                MIT <span className="text-gray-400 group-hover:text-primary transition-colors">Technology Review</span>
-                            </h1>
-                            <span className={`text-[9px] font-black text-gray-400 uppercase tracking-widest transition-all duration-500 overflow-hidden whitespace-nowrap ${isScrolled ? "max-h-0 opacity-0" : "max-h-5 opacity-100 mt-1.5"
-                                }`}>
-                                Publicado por <span className="text-primary">Opinno</span>
-                            </span>
-                        </Link>
-                    </div>
-
-                    {/* Right Actions */}
+                    {/* Right: Actions */}
                     <div className="flex items-center justify-end space-x-6">
                         <Link href="/suscribirse" className="hidden sm:block bg-accent text-primary text-[10px] font-black px-6 py-2.5 uppercase tracking-widest hover:bg-primary hover:text-white transition-all">
                             Suscríbete

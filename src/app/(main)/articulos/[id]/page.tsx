@@ -1,8 +1,10 @@
-import { MOCK_ARTICLES } from "@/data/mock-articles";
+import { db } from "@/lib/firebase-admin";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { Clock, User, Share2, Facebook, Twitter, Linkedin, ArrowLeft } from "lucide-react";
+
+export const revalidate = 60; // 1 minute revalidation
 
 interface ArticlePageProps {
     params: Promise<{ id: string }>;
@@ -10,13 +12,46 @@ interface ArticlePageProps {
 
 export default async function ArticlePage({ params }: ArticlePageProps) {
     const { id } = await params;
-    const article = MOCK_ARTICLES.find((a) => a.id === id);
 
-    if (!article) {
+    const docSnap = await db.collection("articles").doc(id).get();
+    if (!docSnap.exists) {
         return notFound();
     }
 
-    const relatedArticles = MOCK_ARTICLES.filter((a) => a.id !== id).slice(0, 3);
+    const data = docSnap.data()!;
+    const article = {
+        id: docSnap.id,
+        title: data.title || "",
+        excerpt: data.excerpt || "",
+        category: data.category || "General",
+        author: data.author || "Redacción",
+        date: data.date || "",
+        readingTime: data.readingTime || "1 min",
+        imageUrl: data.imageUrl || "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&q=80&w=800",
+        content: data.content || ""
+    };
+
+    const relatedSnap = await db.collection("articles")
+        .orderBy("migratedAt", "desc")
+        .limit(4)
+        .get();
+
+    const relatedArticles = relatedSnap.docs
+        .filter(d => d.id !== id)
+        .map(doc => {
+            const d = doc.data();
+            return {
+                id: doc.id,
+                title: d.title || "",
+                excerpt: d.excerpt || "",
+                category: d.category || "General",
+                author: d.author || "Redacción",
+                date: d.date || "",
+                readingTime: d.readingTime || "1 min",
+                imageUrl: d.imageUrl || "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&q=80&w=800",
+            };
+        })
+        .slice(0, 3);
 
     return (
         <article className="pt-28 bg-white min-h-screen">
@@ -84,28 +119,10 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
                             {article.excerpt}
                         </p>
 
-                        <div className="space-y-8 text-gray-800 text-lg leading-loose font-medium">
-                            <p>
-                                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-                            </p>
-                            <p>
-                                Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-                            </p>
-                            <h2 className="text-3xl font-black tracking-tighter uppercase italic mt-16 mb-6">La perspectiva del MIT</h2>
-                            <p>
-                                Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.
-                            </p>
-                            <blockquote className="my-16 p-12 bg-primary text-white relative overflow-hidden">
-                                <div className="absolute top-0 right-0 w-1/4 h-full bg-accent/10 -skew-x-12 transform translate-x-1/2" />
-                                <p className="text-3xl font-black italic tracking-tighter leading-tight relative z-10">
-                                    "Esta tecnología no es solo una mejora incremental, es un cambio de paradigma que redefinirá nuestra relación con el conocimiento."
-                                </p>
-                                <cite className="block mt-6 text-sm font-black uppercase tracking-[0.2em] text-accent relative z-10">— Grace Huckins, Editora de IA</cite>
-                            </blockquote>
-                            <p>
-                                Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt. Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit.
-                            </p>
-                        </div>
+                        <div
+                            className="space-y-8 text-gray-800 text-lg leading-loose font-medium"
+                            dangerouslySetInnerHTML={{ __html: article.content }}
+                        />
                     </div>
 
                     {/* Social Share */}

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { Facebook, Twitter, Linkedin, Instagram, Mail } from "lucide-react";
 
@@ -9,10 +10,15 @@ export default function Footer() {
                     {/* Brand Info */}
                     <div className="lg:col-span-5">
                         <div className="flex flex-col mb-8">
-                            <h2 className="text-3xl font-black tracking-tighter uppercase leading-none">
-                                MIT <span className="text-gray-400">Technology Review</span>
-                            </h2>
-                            <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest mt-2">
+                            <div className="relative h-12 w-64 md:w-80">
+                                <Image
+                                    src="/logo-white.png"
+                                    alt="MIT Technology Review"
+                                    fill
+                                    className="object-contain object-left"
+                                />
+                            </div>
+                            <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest mt-4">
                                 Publicado por <span className="text-white">Opinno</span>
                             </span>
                         </div>

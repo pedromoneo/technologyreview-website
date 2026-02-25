@@ -1,17 +1,38 @@
-import { MOCK_ARTICLES } from "@/data/mock-articles";
 import ArticleCard from "@/components/home/ArticleCard";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import { db } from "@/lib/firebase-admin";
 
-export default function Home() {
-  const featuredArticle = MOCK_ARTICLES[0];
-  const latestArticles = MOCK_ARTICLES.slice(1);
+export const revalidate = 60;
+
+export default async function Home() {
+  const snapshot = await db.collection("articles")
+    .orderBy("migratedAt", "desc")
+    .limit(10)
+    .get();
+
+  const articles = snapshot.docs.map(doc => {
+    const data = doc.data();
+    return {
+      id: doc.id,
+      title: data.title || "",
+      excerpt: data.excerpt || "",
+      category: data.category || "General",
+      author: data.author || "Redacción",
+      date: data.date || "",
+      readingTime: data.readingTime || "1 min",
+      imageUrl: data.imageUrl || "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&q=80&w=800",
+    };
+  });
+
+  const featuredArticle = articles[0] || null;
+  const latestArticles = articles.slice(1);
 
   return (
     <div className="flex flex-col pt-28">
       {/* Hero Section - The Split Hero */}
       <section className="bg-primary">
-        <ArticleCard article={featuredArticle} featured />
+        {featuredArticle && <ArticleCard article={featuredArticle as any} featured />}
       </section>
 
       {/* Main Content Area */}
@@ -56,12 +77,9 @@ export default function Home() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-20">
               {latestArticles.map((article) => (
-                <ArticleCard key={article.id} article={article} />
+                <ArticleCard key={article.id} article={article as any} />
               ))}
               {/* More articles would go here */}
-              {MOCK_ARTICLES.slice(0, 2).map((article) => (
-                <ArticleCard key={article.id + "-extra"} article={article} />
-              ))}
             </div>
 
             <div className="mt-24 text-center">
