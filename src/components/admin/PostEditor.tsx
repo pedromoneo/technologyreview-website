@@ -65,7 +65,7 @@ export default function PostEditor({ postId }: PostEditorProps) {
             };
             fetchPost();
         }
-    }, [postId]);
+    }, [postId, categories.length]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -99,28 +99,28 @@ export default function PostEditor({ postId }: PostEditorProps) {
     };
 
     return (
-        <form onSubmit={handleSubmit} className="max-w-5xl mx-auto space-y-12">
+        <form onSubmit={handleSubmit} className="max-w-4xl mx-auto space-y-6">
             <div className="flex items-center justify-between">
-                <Link href="/admin/posts" className="flex items-center text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-primary transition-colors">
-                    <ArrowLeft className="w-4 h-4 mr-2" />
-                    Volver a la lista
+                <Link href="/admin/posts" className="flex items-center text-[9px] font-black uppercase tracking-widest text-gray-400 hover:text-primary transition-colors">
+                    <ArrowLeft className="w-3.5 h-3.5 mr-2" />
+                    Artículos
                 </Link>
                 <button
                     type="submit"
                     disabled={loading}
-                    className="bg-primary text-white px-10 py-4 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center shadow-xl shadow-primary/20 hover:bg-accent hover:text-primary transition-all active:scale-95 disabled:opacity-50"
+                    className="bg-primary text-white px-6 py-2.5 rounded-lg font-black text-[10px] uppercase tracking-widest flex items-center shadow-md shadow-primary/10 hover:bg-accent hover:text-primary transition-all active:scale-95 disabled:opacity-50"
                 >
-                    <Save className="w-4 h-4 mr-3" />
-                    {loading ? "Guardando..." : "Guardar Artículo"}
+                    <Save className="w-3.5 h-3.5 mr-2" />
+                    {loading ? "..." : "Guardar"}
                 </button>
             </div>
 
-            <div className="bg-white rounded-[3rem] p-12 shadow-sm border border-gray-100 space-y-10">
+            <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-100 space-y-8">
                 {/* Title and Excerpt */}
-                <div className="space-y-6">
-                    <div className="flex items-center space-x-3 text-accent mb-2">
-                        <Type className="w-4 h-4" />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Contenido Principal</span>
+                <div className="space-y-4">
+                    <div className="flex items-center space-x-2 text-accent">
+                        <Type className="w-3.5 h-3.5" />
+                        <span className="text-[9px] font-black uppercase tracking-widest">Contenido</span>
                     </div>
                     <input
                         type="text"
@@ -128,60 +128,62 @@ export default function PostEditor({ postId }: PostEditorProps) {
                         value={formData.title}
                         onChange={handleChange}
                         placeholder="Título del artículo"
-                        className="w-full text-4xl md:text-5xl font-black tracking-tighter outline-none placeholder:text-gray-100 border-b-2 border-transparent focus:border-accent pb-4 transition-all"
+                        className="w-full text-2xl md:text-3xl font-black tracking-tighter outline-none placeholder:text-gray-100 border-b border-transparent focus:border-accent pb-2 transition-all"
                         required
                     />
                     <textarea
                         name="excerpt"
                         value={formData.excerpt}
                         onChange={handleChange}
-                        placeholder="Resumen o bajada del artículo..."
-                        className="w-full text-xl text-gray-400 font-medium leading-relaxed outline-none min-h-[100px] resize-none border-l-4 border-gray-50 pl-6 focus:border-accent transition-all"
+                        placeholder="Breve resumen informativo..."
+                        className="w-full text-lg text-gray-400 font-medium leading-normal outline-none min-h-[80px] resize-none border-l-2 border-gray-50 pl-4 focus:border-accent transition-all"
                         required
                     />
                 </div>
 
                 {/* Main Image URL */}
-                <div className="space-y-4">
-                    <div className="flex items-center space-x-3 text-accent mb-2">
-                        <ImageIcon className="w-4 h-4" />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Imagen Destacada</span>
+                <div className="space-y-3">
+                    <div className="flex items-center space-x-2 text-accent">
+                        <ImageIcon className="w-3.5 h-3.5" />
+                        <span className="text-[9px] font-black uppercase tracking-widest">Imagen</span>
                     </div>
                     <input
                         type="url"
                         name="imageUrl"
                         value={formData.imageUrl}
                         onChange={handleChange}
-                        placeholder="URL de la imagen (Unsplash, etc.)"
-                        className="w-full bg-gray-50 rounded-2xl px-8 py-4 text-sm font-medium outline-none border-2 border-transparent focus:border-accent focus:bg-white transition-all shadow-inner"
+                        placeholder="https://images.unsplash.com/..."
+                        className="w-full bg-gray-50 rounded-lg px-4 py-2 text-[11px] font-medium outline-none border border-transparent focus:border-accent focus:bg-white transition-all shadow-inner"
                     />
                 </div>
 
                 {/* Body Content */}
-                <div className="space-y-4">
-                    <div className="flex items-center space-x-3 text-accent mb-2">
-                        <Layout className="w-4 h-4" />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Cuerpo del Artículo (Formato Enriquecido)</span>
+                <div className="space-y-3">
+                    <div className="flex items-center space-x-2 text-accent">
+                        <Layout className="w-3.5 h-3.5" />
+                        <span className="text-[9px] font-black uppercase tracking-widest">Cuerpo</span>
                     </div>
-                    <WysiwygEditor
-                        value={formData.content}
-                        onChange={(val) => setFormData(prev => ({ ...prev, content: val }))}
-                        placeholder="Escribe el contenido aquí..."
-                    />
+                    <div className="border border-gray-100 rounded-lg overflow-hidden">
+                        <WysiwygEditor
+                            value={formData.content}
+                            onChange={(val) => setFormData(prev => ({ ...prev, content: val }))}
+                            placeholder="Empieza a escribir..."
+                        />
+                    </div>
                 </div>
 
                 {/* Metadata Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pt-10 border-t border-gray-50">
-                    <div className="space-y-4">
-                        <div className="flex items-center space-x-3 text-accent">
-                            <Tag className="w-4 h-4" />
-                            <span className="text-[10px] font-black uppercase tracking-widest">Categoría y Tags</span>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-6 border-t border-gray-50">
+                    <div className="space-y-3">
+                        <div className="flex items-center space-x-2 text-accent">
+                            <Tag className="w-3.5 h-3.5" />
+                            <span className="text-[9px] font-black uppercase tracking-widest">Tags</span>
                         </div>
                         <select
                             name="category"
                             value={formData.category}
                             onChange={handleChange}
-                            className="w-full bg-gray-50 rounded-xl px-6 py-3 text-[10px] font-black uppercase tracking-widest outline-none border-2 border-transparent focus:border-accent transition-all tabular-nums"
+                            className="w-full bg-gray-50 rounded-lg px-3 py-2 text-[9px] font-black uppercase tracking-widest outline-none border border-transparent focus:border-accent transition-all"
                         >
                             {categories.map(cat => (
                                 <option key={cat} value={cat}>{cat}</option>
@@ -192,46 +194,46 @@ export default function PostEditor({ postId }: PostEditorProps) {
                             name="tags"
                             value={formData.tags}
                             onChange={handleChange}
-                            placeholder="Tags (separados por coma)"
-                            className="w-full bg-gray-50 rounded-xl px-6 py-3 text-xs font-black uppercase tracking-widest outline-none border-2 border-transparent focus:border-accent transition-all"
+                            placeholder="ia, futuro, apps..."
+                            className="w-full bg-gray-50 rounded-lg px-3 py-2 text-[10px] font-black uppercase tracking-widest outline-none border border-transparent focus:border-accent transition-all"
                         />
                     </div>
 
-                    <div className="space-y-4">
-                        <div className="flex items-center space-x-3 text-accent">
-                            <User className="w-4 h-4" />
-                            <span className="text-[10px] font-black uppercase tracking-widest">Autor</span>
+                    <div className="space-y-3">
+                        <div className="flex items-center space-x-2 text-accent">
+                            <User className="w-3.5 h-3.5" />
+                            <span className="text-[9px] font-black uppercase tracking-widest">Autor</span>
                         </div>
                         <input
                             type="text"
                             name="author"
                             value={formData.author}
                             onChange={handleChange}
-                            className="w-full bg-gray-50 rounded-xl px-6 py-3 text-xs font-black uppercase tracking-widest outline-none border-2 border-transparent focus:border-accent transition-all"
+                            className="w-full bg-gray-50 rounded-lg px-3 py-2 text-[10px] font-black uppercase tracking-widest outline-none border border-transparent focus:border-accent transition-all"
                         />
                     </div>
 
-                    <div className="space-y-4">
-                        <div className="flex items-center space-x-3 text-accent">
-                            <Calendar className="w-4 h-4" />
-                            <span className="text-[10px] font-black uppercase tracking-widest">Publicación</span>
+                    <div className="space-y-3">
+                        <div className="flex items-center space-x-2 text-accent">
+                            <Calendar className="w-3.5 h-3.5" />
+                            <span className="text-[9px] font-black uppercase tracking-widest">Detalles</span>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-2">
                             <input
                                 type="date"
                                 name="date"
                                 value={formData.date}
                                 onChange={handleChange}
-                                className="w-full bg-gray-50 rounded-xl px-6 py-3 text-[10px] font-black uppercase tracking-widest outline-none border-2 border-transparent focus:border-accent transition-all"
+                                className="w-full bg-gray-50 rounded-lg px-2 py-2 text-[9px] font-black uppercase tracking-widest outline-none border border-transparent focus:border-accent transition-all"
                             />
                             <div className="relative">
-                                <Clock className="absolute left-4 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" />
+                                <Clock className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" />
                                 <input
                                     type="text"
                                     name="readingTime"
                                     value={formData.readingTime}
                                     onChange={handleChange}
-                                    className="w-full bg-gray-50 rounded-xl pl-10 pr-6 py-3 text-xs font-black uppercase tracking-widest outline-none border-2 border-transparent focus:border-accent transition-all"
+                                    className="w-full bg-gray-50 rounded-lg pl-8 pr-2 py-2 text-[10px] font-black uppercase tracking-widest outline-none border border-transparent focus:border-accent transition-all"
                                 />
                             </div>
                         </div>
