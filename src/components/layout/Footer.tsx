@@ -40,34 +40,33 @@ export default function Footer() {
                     <div className="lg:col-span-2">
                         <h3 className="text-[11px] font-black uppercase tracking-[0.2em] mb-10 text-gray-500">Secciones</h3>
                         <ul className="space-y-5 text-xs text-white/60 font-black uppercase tracking-widest">
-                            <li><Link href="#" className="hover:text-accent transition-colors">Temas</Link></li>
+                            <li><Link href="/" className="hover:text-accent transition-colors">Inicio</Link></li>
+                            <li><Link href="/temas/inteligencia-artificial" className="hover:text-accent transition-colors">Temas</Link></li>
                             <li><Link href="#" className="hover:text-accent transition-colors">Informes</Link></li>
                             <li><Link href="#" className="hover:text-accent transition-colors">Eventos</Link></li>
                             <li><Link href="#" className="hover:text-accent transition-colors">Podcast</Link></li>
-                            <li><Link href="#" className="hover:text-accent transition-colors">Nosotros</Link></li>
                         </ul>
                     </div>
 
                     {/* Contact Info */}
                     <div className="lg:col-span-5 flex flex-col items-start lg:items-end">
-                        <h3 className="text-[11px] font-black uppercase tracking-[0.2em] mb-10 text-gray-500">Contacta con nosotros</h3>
-                        <button className="bg-accent text-primary px-10 py-4 font-black text-xs uppercase tracking-[0.2em] hover:bg-white transition-all mb-12">
-                            Contacta con nosotros
-                        </button>
-
-                        <div className="flex space-x-4">
+                        <h3 className="text-[11px] font-black uppercase tracking-[0.2em] mb-10 text-gray-500">Sigue la innovación</h3>
+                        <div className="flex space-x-4 mb-12">
                             {[
-                                { icon: Linkedin, href: "https://www.linkedin.com/company/2995330" },
+                                { icon: Linkedin, href: "https://www.linkedin.com/company/mit-technology-review-en-español" },
                                 { icon: Instagram, href: "https://www.instagram.com/technologyreviewes/" },
-                                { icon: Twitter, href: "https://bsky.app/profile/technologyreviewes.bsky.social" },
+                                { icon: Twitter, href: "https://twitter.com/techreview_es" },
                                 { icon: Facebook, href: "https://www.facebook.com/technologyreview.es" },
                                 { icon: Mail, href: "mailto:technologyreview@opinno.com" }
                             ].map((social, i) => (
-                                <Link key={i} href={social.href} className="w-10 h-10 border border-white/20 rounded-full flex items-center justify-center hover:bg-white hover:text-black transition-all">
-                                    <social.icon className="w-4 h-4" />
+                                <Link key={i} href={social.href} className="w-10 h-10 border border-white/20 rounded-full flex items-center justify-center hover:bg-accent hover:border-accent hover:text-primary transition-all group">
+                                    <social.icon className="w-4 h-4 group-hover:scale-110 transition-transform" />
                                 </Link>
                             ))}
                         </div>
+                        <button className="bg-accent text-primary px-10 py-4 font-black text-xs uppercase tracking-[0.2em] hover:bg-white transition-all">
+                            Suscríbete al Newsletter
+                        </button>
                     </div>
                 </div>
 

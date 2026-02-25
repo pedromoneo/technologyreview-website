@@ -1,37 +1,58 @@
 import * as admin from 'firebase-admin';
+import { App } from 'firebase-admin/app';
+import { Firestore } from 'firebase-admin/firestore';
+import { Auth } from 'firebase-admin/auth';
 
-if (!admin.apps.length) {
-    if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+let app: App;
+
+const initializeApp = () => {
+    const serviceAccountKey = process.env.ADMIN_SDK_KEY;
+    if (serviceAccountKey) {
         try {
-            const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY as string);
-            admin.initializeApp({
+            let serviceAccount;
+            try {
+                serviceAccount = JSON.parse(serviceAccountKey);
+            } catch (jsonError) {
+                try {
+                    const decoded = Buffer.from(serviceAccountKey, 'base64').toString('utf-8');
+                    serviceAccount = JSON.parse(decoded);
+                } catch (b64Error) {
+                    throw new Error('Could not parse ADMIN_SDK_KEY');
+                }
+            }
+            return admin.initializeApp({
                 credential: admin.credential.cert(serviceAccount),
                 projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
             });
         } catch (error) {
-            console.error('Firebase admin initialization error', error);
-        }
-    } else {
-        // Fallback or local dev
-        try {
-            admin.initializeApp({
-                credential: admin.credential.applicationDefault(),
+            console.error('Firebase admin initialization error:', error);
+            // Fallback
+            return admin.initializeApp({
                 projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
             });
-        } catch (error) {
-            console.warn('Could not initialize Firebase Admin SDK. Expected locally without GOOGLE_APPLICATION_CREDENTIALS.', error);
         }
+    } else {
+        return admin.initializeApp({
+            projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+        });
     }
+};
+
+if (!admin.apps.length) {
+    app = initializeApp();
+} else {
+    app = admin.apps[0] as App;
 }
 
-let db: FirebaseFirestore.Firestore;
-let auth: admin.auth.Auth;
+let db: Firestore;
+let auth: Auth;
 
 try {
-    db = admin.firestore();
-    auth = admin.auth();
+    // Use the specific app instance
+    db = admin.firestore(app);
+    auth = admin.auth(app);
 } catch (e) {
-    // Allows Next.js to compile without crashing gracefully
+    console.error('Error getting services:', e);
 }
 
 export { db, auth };

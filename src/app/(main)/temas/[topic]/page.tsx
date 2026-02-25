@@ -11,6 +11,11 @@ interface TopicPageProps {
 export default async function TopicPage({ params }: TopicPageProps) {
     const { topic } = await params;
 
+    if (!db) {
+        console.error("Database not initialized");
+        return notFound();
+    }
+
     const snapshot = await db.collection("articles")
         .orderBy("migratedAt", "desc")
         .limit(500)

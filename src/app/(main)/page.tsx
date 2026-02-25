@@ -6,6 +6,15 @@ import { db } from "@/lib/firebase-admin";
 export const revalidate = 60;
 
 export default async function Home() {
+  if (!db) {
+    console.error("Database not initialized");
+    return (
+      <div className="flex flex-col pt-28 min-h-screen items-center justify-center">
+        <h1 className="text-2xl font-black uppercase">Error de conexión</h1>
+      </div>
+    );
+  }
+
   const snapshot = await db.collection("articles")
     .orderBy("migratedAt", "desc")
     .limit(10)
