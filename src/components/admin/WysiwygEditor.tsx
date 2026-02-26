@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { Bold, Italic, Link, List, Quote, Heading1, Heading2, Code, Eye } from "lucide-react";
+import DOMPurify from "isomorphic-dompurify";
 
 interface WysiwygEditorProps {
     value: string;
@@ -149,7 +150,7 @@ export default function WysiwygEditor({ value, onChange, placeholder, className 
                     `}</style>
                     <div
                         className="article-content preview-container max-w-none font-serif"
-                        dangerouslySetInnerHTML={{ __html: value || `<p class="text-gray-300 italic">No hay contenido para previsualizar...</p>` }}
+                        dangerouslySetInnerHTML={{ __html: value ? DOMPurify.sanitize(value) : `<p class="text-gray-300 italic">No hay contenido para previsualizar...</p>` }}
                     />
                 </div>
             )}

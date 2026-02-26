@@ -3,30 +3,45 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // Helper function to check if user is admin
     function isAdmin() {
-      return request.auth != null && request.auth.token.email == 'pedro.moneo@gmail.com';
+      let isSuperAdmin = request.auth != null && request.auth.token.email == 'pedro.moneo@gmail.com';
+      let isAuthorized = request.auth != null && exists(/databases/$(database)/documents/authorized_users/$(request.auth.token.email.lower()));
+      return isSuperAdmin || isAuthorized;
     }
 
-    // Articles are public for reading, but only admin can write
+    // Public collections for reading
     match /articles/{articleId} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
-    // Topics are public for reading, but only admin can write
     match /topics/{topicId} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
-    // Users collection - users can read their own profile, admin can do everything
+    match /estudios/{estudioId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Users can read/write their own profiles
     match /users/{userId} {
       allow read, write: if request.auth != null && (request.auth.uid == userId || isAdmin());
     }
 
-    // Default deny for everything else
+    // Authorized users list - only admins can see/modify
+    match /authorized_users/{userEmail} {
+      allow read, write: if isAdmin();
+    }
+
+    // Default deny for everything else - safety first
     match /{document=**} {
-      allow read: if true;
-      allow write: if isAdmin();
+      allow read, write: if isAdmin();
     }
   }
 }

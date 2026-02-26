@@ -4,8 +4,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { Clock, User, Share2, Facebook, Twitter, Linkedin, ArrowLeft } from "lucide-react";
 import { cleanContent } from "@/lib/content-utils";
+import DOMPurify from "isomorphic-dompurify";
 
-export const revalidate = 60; // 1 minute revalidation
+export const revalidate = 3600; // 1 hour revalidation
 
 interface ArticlePageProps {
     params: Promise<{ id: string }>;
@@ -128,7 +129,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
 
                             <div
                                 className="space-y-8 text-gray-800 text-lg leading-loose font-medium article-content"
-                                dangerouslySetInnerHTML={{ __html: cleanContent(article.content) }}
+                                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(cleanContent(article.content)) }}
                             />
                         </div>
 

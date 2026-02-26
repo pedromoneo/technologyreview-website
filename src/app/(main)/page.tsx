@@ -4,7 +4,7 @@ import { ArrowRight } from "lucide-react";
 import { db } from "@/lib/firebase-admin";
 import { slugify } from "@/lib/content-utils";
 
-export const revalidate = 60;
+export const revalidate = 600; // 10 minutes cache
 
 export default async function Home() {
   if (!db) {

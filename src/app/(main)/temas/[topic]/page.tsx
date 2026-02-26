@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { slugify } from "@/lib/content-utils";
 import Link from "next/link";
 
-export const revalidate = 60;
+export const revalidate = 600; // 10 minutes cache for topic pages
 
 interface TopicPageProps {
     params: Promise<{ topic: string }>;
@@ -30,7 +30,8 @@ export default async function TopicPage({ params, searchParams }: TopicPageProps
     }
 
     const snapshot = await db.collection("articles")
-        .limit(2000) // Increase limit slightly to catch more if needed, still filtered in memory
+        .orderBy("migratedAt", "desc")
+        .limit(500) // Efficient limit for search/topic fallback
         .get();
 
     const allArticles = snapshot.docs.map(doc => {

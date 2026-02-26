@@ -2,6 +2,7 @@ import { db } from "@/lib/firebase-admin";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import { cleanContent } from "@/lib/content-utils";
+import DOMPurify from "isomorphic-dompurify";
 
 export const revalidate = 60;
 
@@ -25,7 +26,7 @@ export default async function StaticPage({ params }: PageProps) {
     }
 
     const pageData = snapshot.docs[0].data();
-    const cleanedContent = cleanContent(pageData.content || "");
+    const sanitizedContent = DOMPurify.sanitize(cleanContent(pageData.content || ""));
 
     return (
         <article className="min-h-screen bg-white">
@@ -72,7 +73,7 @@ export default async function StaticPage({ params }: PageProps) {
             <main className="container mx-auto px-6 py-20 max-w-4xl">
                 <div
                     className="prose prose-xl prose-primary mx-auto article-content"
-                    dangerouslySetInnerHTML={{ __html: cleanedContent }}
+                    dangerouslySetInnerHTML={{ __html: sanitizedContent }}
                 />
             </main>
         </article>
