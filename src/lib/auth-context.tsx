@@ -7,6 +7,9 @@ import {
     GoogleAuthProvider,
     signInWithPopup,
     signOut,
+    sendSignInLinkToEmail,
+    isSignInWithEmailLink,
+    signInWithEmailLink,
 } from 'firebase/auth'
 import { auth, db } from './firebase'
 import { collection, query, where, getDocs } from 'firebase/firestore'
@@ -19,6 +22,7 @@ interface AuthContextType {
     loading: boolean
     isAdmin: boolean
     loginWithGoogle: () => Promise<void>
+    loginWithOTP: (email: string) => Promise<void>
     logout: () => Promise<void>
 }
 
@@ -30,6 +34,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [isAdmin, setIsAdmin] = useState(false)
 
     useEffect(() => {
+        // Handle Email Link Sign-in
+        const checkEmailLink = async () => {
+            if (isSignInWithEmailLink(auth, window.location.href)) {
+                let email = window.localStorage.getItem('emailForSignIn')
+                if (!email) {
+                    email = window.prompt('Please provide your email for confirmation')
+                }
+                if (email) {
+                    try {
+                        await signInWithEmailLink(auth, email, window.location.href)
+                        window.localStorage.removeItem('emailForSignIn')
+                    } catch (error) {
+                        console.error('Error signing in with email link:', error)
+                    }
+                }
+            }
+        }
+        checkEmailLink()
+
         const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
             setUser(authUser)
 
@@ -66,6 +89,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await signInWithPopup(auth, provider)
     }
 
+    const loginWithOTP = async (email: string) => {
+        const actionCodeSettings = {
+            url: window.location.href,
+            handleCodeInApp: true,
+        }
+        await sendSignInLinkToEmail(auth, email, actionCodeSettings)
+        window.localStorage.setItem('emailForSignIn', email)
+    }
+
     const logout = async () => {
         await signOut(auth)
     }
@@ -76,6 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             loading,
             isAdmin,
             loginWithGoogle,
+            loginWithOTP,
             logout
         }}>
             {children}
