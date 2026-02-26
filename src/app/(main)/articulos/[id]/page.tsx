@@ -129,7 +129,12 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
 
                             <div
                                 className="space-y-8 text-gray-800 text-lg leading-loose font-medium article-content"
-                                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(cleanContent(article.content)) }}
+                                dangerouslySetInnerHTML={{
+                                    __html: DOMPurify.sanitize(cleanContent(article.content), {
+                                        ADD_TAGS: ["figure", "figcaption", "img", "iframe"],
+                                        ADD_ATTR: ["src", "alt", "class", "width", "height", "loading", "allow", "allowfullscreen", "frameborder"]
+                                    })
+                                }}
                             />
                         </div>
 

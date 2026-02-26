@@ -26,7 +26,10 @@ export default async function StaticPage({ params }: PageProps) {
     }
 
     const pageData = snapshot.docs[0].data();
-    const sanitizedContent = DOMPurify.sanitize(cleanContent(pageData.content || ""));
+    const sanitizedContent = DOMPurify.sanitize(cleanContent(pageData.content || ""), {
+        ADD_TAGS: ["figure", "figcaption", "img", "iframe"],
+        ADD_ATTR: ["src", "alt", "class", "width", "height", "loading", "allow", "allowfullscreen", "frameborder"]
+    });
 
     return (
         <article className="min-h-screen bg-white">

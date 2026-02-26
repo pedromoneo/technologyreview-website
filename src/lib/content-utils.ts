@@ -18,14 +18,10 @@ export function cleanContent(content: string): string {
     });
 
     // 4. Recover paragraph structure
-    // If it's already mostly HTML, we just want to ensure the whitespace between tags is cleaned
-    // But many imported articles have text BETWEEN or OUTSIDE tags without <p> wrappers.
+    // ONLY apply simple paragraph wrapping if it looks like plain text or has very few tags
+    const hasTags = /<[a-z][\s\S]*>/i.test(cleaned);
 
-    // First, split by existing block tags to identify "islands" of plain text
-    const blockTags = /<(p|h[1-6]|ul|ol|li|blockquote|div|section|table|figure|hr)[^>]*>|<\/(p|h[1-6]|ul|ol|li|blockquote|div|section|table|figure|hr)>/gi;
-
-    // If the content has NO block tags, wrap everything logically
-    if (!blockTags.test(cleaned)) {
+    if (!hasTags) {
         return cleaned
             .split(/\n{1,}/)
             .filter(p => p.trim().length > 0)
@@ -33,19 +29,13 @@ export function cleanContent(content: string): string {
             .join('');
     }
 
-    // If it HAS tags, we need to be careful. 
-    // A common issue in migrated content is "text\n<p>..." where 'text' isn't wrapped.
-    // Let's use a simpler heuristic: if it looks like there are double newlines, treat them as paragraph breaks
-    // but only outside of existing tags. This is hard with regex, so we'll do a "re-format" approach.
-
-    // Replace double newlines with placeholders to preserve them
-    cleaned = cleaned.replace(/\n\s*\n/g, '</p><p>');
-
-    // Final cleanup: ensure we don't have empty paragraphs or double nested ones
+    // If it has tags, we want to maintain them. 
+    // BUT we still want to clean up excessive newlines that might cause gaps.
+    // Instead of raw replacement, we'll just trim and clean whitespace
     cleaned = cleaned
         .replace(/<p>\s*<\/p>/g, '')
-        .replace(/<p><p>/g, '<p>')
-        .replace(/<\/p><\/p>/g, '</p>');
+        .replace(/\s*rn\s*/g, ' ') // Clean up any leftover rn
+        .trim();
 
     return cleaned;
 }
