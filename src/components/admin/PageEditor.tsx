@@ -24,6 +24,7 @@ export default function PageEditor({ pageId }: PageEditorProps) {
         featuredImageUrl: "",
         headerImageUrl: "",
         slug: "",
+        status: "draft",
     });
 
     useEffect(() => {
@@ -32,14 +33,14 @@ export default function PageEditor({ pageId }: PageEditorProps) {
                 const docRef = doc(db, "pages", pageId);
                 const docSnap = await getDoc(docRef);
                 if (docSnap.exists()) {
-                    setFormData(docSnap.data() as any);
+                    setFormData(prev => ({ ...prev, ...docSnap.data() }));
                 }
             };
             fetchPage();
         }
     }, [pageId]);
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({
             ...prev,
@@ -81,14 +82,26 @@ export default function PageEditor({ pageId }: PageEditorProps) {
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Volver a Páginas
                 </Link>
-                <button
-                    type="submit"
-                    disabled={loading}
-                    className="bg-primary text-white px-10 py-4 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center shadow-xl shadow-primary/20 hover:bg-accent hover:text-primary transition-all active:scale-95 disabled:opacity-50"
-                >
-                    <Save className="w-4 h-4 mr-3" />
-                    {loading ? "Guardando..." : "Guardar Página"}
-                </button>
+                <div className="flex items-center space-x-4">
+                    <select
+                        name="status"
+                        value={formData.status}
+                        onChange={handleChange}
+                        className="bg-gray-50 rounded-xl px-4 py-4 text-[10px] font-black uppercase tracking-widest outline-none border-2 border-transparent focus:border-accent transition-all"
+                    >
+                        <option value="draft">Borrador</option>
+                        <option value="published">Publicado</option>
+                        <option value="featured">Destacado</option>
+                    </select>
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className="bg-primary text-white px-10 py-4 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center shadow-xl shadow-primary/20 hover:bg-accent hover:text-primary transition-all active:scale-95 disabled:opacity-50"
+                    >
+                        <Save className="w-4 h-4 mr-3" />
+                        {loading ? "Guardando..." : "Guardar Página"}
+                    </button>
+                </div>
             </div>
 
             <div className="space-y-8">

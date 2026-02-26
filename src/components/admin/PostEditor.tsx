@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { db } from "@/lib/firebase";
+import { useState, useEffect, useRef } from "react";
+import { db, storage } from "@/lib/firebase";
 import { collection, addDoc, updateDoc, doc, getDoc, serverTimestamp } from "firebase/firestore";
-import { ArrowLeft, Save, Image as ImageIcon, Tag, Layout, Type, User, Calendar, Clock } from "lucide-react";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { ArrowLeft, Save, Image as ImageIcon, Tag, Layout, Type, User, Calendar, Clock, Upload, Loader2, X } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import WysiwygEditor from "./WysiwygEditor";
@@ -14,7 +16,9 @@ interface PostEditorProps {
 
 export default function PostEditor({ postId }: PostEditorProps) {
     const router = useRouter();
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const [loading, setLoading] = useState(false);
+    const [uploading, setUploading] = useState(false);
     const [categories, setCategories] = useState<string[]>([]);
     const [formData, setFormData] = useState({
         title: "",
@@ -23,6 +27,7 @@ export default function PostEditor({ postId }: PostEditorProps) {
         category: "Tecnología",
         author: "Redacción",
         imageUrl: "",
+        status: "draft",
         date: new Date().toISOString().split("T")[0],
         readingTime: "5 min",
         tags: ""
@@ -57,6 +62,7 @@ export default function PostEditor({ postId }: PostEditorProps) {
                         category: data.category || (categories[0] || "Tecnología"),
                         author: data.author || "Redacción",
                         imageUrl: data.imageUrl || "",
+                        status: data.status || "draft",
                         date: data.date || new Date().toISOString().split("T")[0],
                         readingTime: data.readingTime || "5 min",
                         tags: (data.tags || []).join(", ")
@@ -70,6 +76,25 @@ export default function PostEditor({ postId }: PostEditorProps) {
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setUploading(true);
+        try {
+            const fileName = `${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
+            const storageRef = ref(storage, `articles/${fileName}`);
+            await uploadBytes(storageRef, file);
+            const downloadURL = await getDownloadURL(storageRef);
+            setFormData(prev => ({ ...prev, imageUrl: downloadURL }));
+        } catch (error) {
+            console.error("Error uploading image:", error);
+            alert("Error al subir la imagen");
+        } finally {
+            setUploading(false);
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -107,7 +132,7 @@ export default function PostEditor({ postId }: PostEditorProps) {
                 </Link>
                 <button
                     type="submit"
-                    disabled={loading}
+                    disabled={loading || uploading}
                     className="bg-primary text-white px-6 py-2.5 rounded-lg font-black text-[10px] uppercase tracking-widest flex items-center shadow-md shadow-primary/10 hover:bg-accent hover:text-primary transition-all active:scale-95 disabled:opacity-50"
                 >
                     <Save className="w-3.5 h-3.5 mr-2" />
@@ -141,20 +166,74 @@ export default function PostEditor({ postId }: PostEditorProps) {
                     />
                 </div>
 
-                {/* Main Image URL */}
+                {/* Main Image URL & Upload */}
                 <div className="space-y-3">
-                    <div className="flex items-center space-x-2 text-accent">
-                        <ImageIcon className="w-3.5 h-3.5" />
-                        <span className="text-[9px] font-black uppercase tracking-widest">Imagen</span>
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center space-x-2 text-accent">
+                            <ImageIcon className="w-3.5 h-3.5" />
+                            <span className="text-[9px] font-black uppercase tracking-widest">Imagen Destacada</span>
+                        </div>
+                        {formData.imageUrl && (
+                            <button
+                                type="button"
+                                onClick={() => setFormData(p => ({ ...p, imageUrl: "" }))}
+                                className="text-[8px] font-black uppercase tracking-widest text-rose-500 hover:text-rose-600 transition-colors flex items-center"
+                            >
+                                <X className="w-2.5 h-2.5 mr-1" />
+                                Eliminar
+                            </button>
+                        )}
                     </div>
-                    <input
-                        type="url"
-                        name="imageUrl"
-                        value={formData.imageUrl}
-                        onChange={handleChange}
-                        placeholder="https://images.unsplash.com/..."
-                        className="w-full bg-gray-50 rounded-lg px-4 py-2 text-[11px] font-medium outline-none border border-transparent focus:border-accent focus:bg-white transition-all shadow-inner"
-                    />
+
+                    <div className="flex flex-col md:flex-row gap-4">
+                        <div className="flex-1 space-y-2">
+                            <div className="relative group">
+                                <input
+                                    type="url"
+                                    name="imageUrl"
+                                    value={formData.imageUrl}
+                                    onChange={handleChange}
+                                    placeholder="https://images.unsplash.com/..."
+                                    className="w-full bg-gray-50 rounded-lg px-4 py-2.5 text-[11px] font-medium outline-none border border-transparent focus:border-accent focus:bg-white transition-all shadow-inner"
+                                />
+                            </div>
+                            <p className="text-[8px] font-bold text-gray-300 uppercase tracking-widest">Pega una URL o sube un archivo local</p>
+                        </div>
+
+                        <div className="flex-shrink-0">
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                onChange={handleImageUpload}
+                                accept="image/*"
+                                className="hidden"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => fileInputRef.current?.click()}
+                                disabled={uploading}
+                                className="h-[38px] px-6 bg-gray-50 border border-gray-100 rounded-lg text-primary text-[10px] font-black uppercase tracking-widest flex items-center hover:bg-gray-100 transition-all active:scale-95 disabled:opacity-50"
+                            >
+                                {uploading ? (
+                                    <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
+                                ) : (
+                                    <Upload className="w-3.5 h-3.5 mr-2" />
+                                )}
+                                {uploading ? "Subiendo..." : "Subir archivo"}
+                            </button>
+                        </div>
+                    </div>
+
+                    {formData.imageUrl && (
+                        <div className="relative mt-4 w-full h-48 rounded-xl overflow-hidden border border-gray-100 bg-gray-50 group">
+                            <Image
+                                src={formData.imageUrl}
+                                alt="Preview"
+                                fill
+                                className="object-cover transition-transform duration-700 group-hover:scale-105"
+                            />
+                        </div>
+                    )}
                 </div>
 
                 {/* Body Content */}
@@ -177,18 +256,30 @@ export default function PostEditor({ postId }: PostEditorProps) {
                     <div className="space-y-3">
                         <div className="flex items-center space-x-2 text-accent">
                             <Tag className="w-3.5 h-3.5" />
-                            <span className="text-[9px] font-black uppercase tracking-widest">Tags</span>
+                            <span className="text-[9px] font-black uppercase tracking-widest">Estado y Tags</span>
                         </div>
-                        <select
-                            name="category"
-                            value={formData.category}
-                            onChange={handleChange}
-                            className="w-full bg-gray-50 rounded-lg px-3 py-2 text-[9px] font-black uppercase tracking-widest outline-none border border-transparent focus:border-accent transition-all"
-                        >
-                            {categories.map(cat => (
-                                <option key={cat} value={cat}>{cat}</option>
-                            ))}
-                        </select>
+                        <div className="grid grid-cols-2 gap-2">
+                            <select
+                                name="status"
+                                value={formData.status}
+                                onChange={handleChange}
+                                className="w-full bg-gray-50 rounded-lg px-2 py-2 text-[9px] font-black uppercase tracking-widest outline-none border border-transparent focus:border-accent transition-all"
+                            >
+                                <option value="draft">Borrador</option>
+                                <option value="published">Publicado</option>
+                                <option value="featured">Destacado</option>
+                            </select>
+                            <select
+                                name="category"
+                                value={formData.category}
+                                onChange={handleChange}
+                                className="w-full bg-gray-50 rounded-lg px-2 py-2 text-[9px] font-black uppercase tracking-widest outline-none border border-transparent focus:border-accent transition-all"
+                            >
+                                {categories.map(cat => (
+                                    <option key={cat} value={cat}>{cat}</option>
+                                ))}
+                            </select>
+                        </div>
                         <input
                             type="text"
                             name="tags"
