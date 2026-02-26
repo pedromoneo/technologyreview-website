@@ -17,6 +17,7 @@ export default async function Home() {
   }
 
   const snapshot = await db.collection("articles")
+    .where("status", "in", ["published", "featured"])
     .orderBy("migratedAt", "desc")
     .limit(10)
     .get();

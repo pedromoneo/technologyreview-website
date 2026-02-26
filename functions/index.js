@@ -122,7 +122,7 @@ async function processEntry(entry) {
         date: entry.published ? new Date(entry.published).toLocaleDateString("es-ES", { day: '2-digit', month: 'long', year: 'numeric' }) : new Date().toLocaleDateString("es-ES", { day: '2-digit', month: 'long', year: 'numeric' }),
         imageUrl: imageUrl || null,
         readingTime: `${entry.word_count ? Math.ceil(entry.word_count / 200) : 5} min`,
-        status: "draft",
+        status: "published",
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         migratedAt: admin.firestore.FieldValue.serverTimestamp(),
         originalId: originalId,
