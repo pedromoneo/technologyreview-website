@@ -49,3 +49,15 @@ export function cleanContent(content: string): string {
 
     return cleaned;
 }
+
+export function slugify(str: string): string {
+    if (!str) return "";
+    return str
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "") // Remove accents
+        .replace(/\s+/g, "-")           // Replace spaces with -
+        .replace(/[^\w-]/g, "")          // Remove all non-word chars
+        .replace(/--+/g, "-")           // Replace multiple - with single -
+        .trim();                        // Trim from both sides
+}

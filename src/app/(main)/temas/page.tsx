@@ -1,5 +1,6 @@
 import { db } from "@/lib/firebase-admin";
 import Link from "next/link";
+import { slugify } from "@/lib/content-utils";
 
 export const revalidate = 3600; // Cache for 1 hour
 
@@ -31,7 +32,7 @@ export default async function TemasPage() {
                     {sortedCategories.map(category => (
                         <Link
                             key={category}
-                            href={`/temas/${category.toLowerCase().replace(/\s/g, "-")}`}
+                            href={`/temas/${slugify(category)}`}
                             className="p-8 border-2 border-gray-100 hover:border-accent hover:bg-accent/5 transition-all group"
                         >
                             <h2 className="text-2xl font-black uppercase tracking-tight group-hover:text-primary transition-colors">

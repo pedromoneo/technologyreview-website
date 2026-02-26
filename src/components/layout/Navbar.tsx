@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
+import { slugify } from "@/lib/content-utils";
 
 export default function Navbar() {
     const [isScrolled, setIsScrolled] = useState(false);
@@ -99,7 +100,7 @@ export default function Navbar() {
                                             {topics.map(topic => (
                                                 <Link
                                                     key={topic}
-                                                    href={`/temas/${topic.toLowerCase().replace(/\s/g, "-")}`}
+                                                    href={`/temas/${slugify(topic)}`}
                                                     className="px-4 py-2.5 hover:bg-gray-50 rounded-xl transition-colors text-gray-400 hover:text-primary block font-black uppercase tracking-widest text-[10px]"
                                                 >
                                                     {topic}
@@ -167,7 +168,7 @@ export default function Navbar() {
                                         type="button"
                                         onClick={() => {
                                             setSearchQuery(topic);
-                                            router.push(`/temas/${topic.toLowerCase().replace(/\s/g, "-")}`);
+                                            router.push(`/temas/${slugify(topic)}`);
                                             setIsSearchOpen(false);
                                         }}
                                         className="text-xs font-black uppercase tracking-widest text-white border border-white/20 px-6 py-3 hover:bg-white hover:text-primary transition-all"
@@ -207,7 +208,7 @@ export default function Navbar() {
                                     {topics.map(topic => (
                                         <Link
                                             key={topic}
-                                            href={`/temas/${topic.toLowerCase().replace(/\s/g, "-")}`}
+                                            href={`/temas/${slugify(topic)}`}
                                             onClick={() => setIsMenuOpen(false)}
                                             className="py-3 text-lg font-black italic tracking-tighter uppercase text-primary border-b border-gray-50 flex items-center justify-between group"
                                         >

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
+import { SUPER_ADMINS } from "@/lib/auth-context";
 import { collection, query, getDocs, addDoc, deleteDoc, doc, serverTimestamp } from "firebase/firestore";
 import { User, ShieldCheck, Mail, Plus, Trash2, Search, Loader2, X } from "lucide-react";
 
@@ -20,8 +21,23 @@ export default function UsersPage() {
             const fetched = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
-            }));
-            setUsers(fetched);
+            })) as any[];
+
+            // Ensure super admins are in the list
+            const finalUsers = [...fetched];
+            SUPER_ADMINS.forEach(adminEmail => {
+                if (!fetched.find(u => u.email === adminEmail)) {
+                    finalUsers.push({
+                        id: `system-${adminEmail}`,
+                        email: adminEmail,
+                        role: "Super Admin",
+                        status: "Activo",
+                        isSystem: true
+                    });
+                }
+            });
+
+            setUsers(finalUsers);
         } catch (error) {
             console.error("Error fetching users:", error);
         } finally {
@@ -57,6 +73,11 @@ export default function UsersPage() {
     };
 
     const handleDelete = async (id: string, email: string) => {
+        if (SUPER_ADMINS.includes(email)) {
+            alert("No se puede eliminar a un administrador del sistema.");
+            return;
+        }
+
         if (window.confirm(`¿Estás seguro de que quieres quitar el acceso a ${email}?`)) {
             try {
                 await deleteDoc(doc(db, "authorized_users", id));
@@ -147,7 +168,9 @@ export default function UsersPage() {
                                                     {u.email[0].toUpperCase()}
                                                 </div>
                                                 <div>
-                                                    <p className="text-[10px] font-black uppercase tracking-tight">{u.email.split('@')[0]}</p>
+                                                    <p className="text-[10px] font-black uppercase tracking-tight">
+                                                        {u.email === 'pedro.moneo@gmail.com' ? 'Pedro Moneo' : u.email.split('@')[0]}
+                                                    </p>
                                                     <div className="flex items-center text-[8px] font-bold text-gray-400 uppercase tracking-widest">
                                                         <Mail className="w-2.5 h-2.5 mr-1" />
                                                         {u.email}
@@ -157,17 +180,21 @@ export default function UsersPage() {
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center text-primary">
-                                                <ShieldCheck className="w-3.5 h-3.5 mr-2 text-accent" />
-                                                <span className="text-[9px] font-black uppercase tracking-widest">{u.role || "Editor"}</span>
+                                                <ShieldCheck className={`w-3.5 h-3.5 mr-2 ${SUPER_ADMINS.includes(u.email) ? 'text-blue-500' : 'text-accent'}`} />
+                                                <span className="text-[9px] font-black uppercase tracking-widest">
+                                                    {SUPER_ADMINS.includes(u.email) ? "Super Admin" : (u.role || "Editor")}
+                                                </span>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 text-right">
-                                            <button
-                                                onClick={() => handleDelete(u.id, u.email)}
-                                                className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
+                                            {!SUPER_ADMINS.includes(u.email) && (
+                                                <button
+                                                    onClick={() => handleDelete(u.id, u.email)}
+                                                    className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            )}
                                         </td>
                                     </tr>
                                 ))}

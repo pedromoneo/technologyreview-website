@@ -15,7 +15,7 @@ import { auth, db } from './firebase'
 import { collection, query, where, getDocs } from 'firebase/firestore'
 
 // Fallback super admin
-const SUPER_ADMINS = ['pedro.moneo@gmail.com']
+export const SUPER_ADMINS = ['pedro.moneo@gmail.com']
 
 interface AuthContextType {
     user: User | null

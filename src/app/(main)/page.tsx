@@ -2,6 +2,7 @@ import ArticleCard from "@/components/home/ArticleCard";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { db } from "@/lib/firebase-admin";
+import { slugify } from "@/lib/content-utils";
 
 export const revalidate = 60;
 
@@ -63,7 +64,7 @@ export default async function Home() {
               <ul className="space-y-6">
                 {(sideTopics as string[]).map((topic) => (
                   <li key={topic}>
-                    <Link href={`/temas/${topic.toLowerCase().replace(/\s/g, "-")}`} className="group flex items-center text-sm font-black text-gray-400 hover:text-primary transition-colors uppercase tracking-widest">
+                    <Link href={`/temas/${slugify(topic)}`} className="group flex items-center text-sm font-black text-gray-400 hover:text-primary transition-colors uppercase tracking-widest">
                       <span className="w-0 group-hover:w-4 h-[1px] bg-primary mr-0 group-hover:mr-2 transition-all" />
                       {topic}
                     </Link>

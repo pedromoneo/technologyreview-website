@@ -1,6 +1,7 @@
 import { db } from "@/lib/firebase-admin";
 import ArticleCard from "@/components/home/ArticleCard";
 import { notFound } from "next/navigation";
+import { slugify } from "@/lib/content-utils";
 
 export const revalidate = 60;
 
@@ -9,9 +10,16 @@ interface TopicPageProps {
     searchParams: Promise<{ q?: string }>;
 }
 
+const commonMappings: Record<string, string> = {
+    "ia": "inteligencia-artificial",
+    "ai": "inteligencia-artificial",
+    "artificial-intelligence": "inteligencia-artificial"
+};
+
 export default async function TopicPage({ params, searchParams }: TopicPageProps) {
-    const { topic } = await params;
+    const { topic: rawTopic } = await params;
     const { q } = await searchParams;
+    const topic = decodeURIComponent(rawTopic);
 
     if (!db) {
         console.error("Database not initialized");
@@ -42,25 +50,42 @@ export default async function TopicPage({ params, searchParams }: TopicPageProps
     let filteredArticles = [];
     let topicDisplay = "";
 
+    const topicSlug = slugify(topic);
+    const mappedTopicSlug = commonMappings[topicSlug] || topicSlug;
+
     const readableTopic = topic === "busqueda" ? "Búsqueda" : topic.split("-").join(" ");
     topicDisplay = readableTopic.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 
     if (topic === "busqueda" && q) {
-        const query = q.toLowerCase();
+        const queryStr = q.toLowerCase();
         filteredArticles = allArticles.filter(article =>
-            article.title?.toLowerCase().includes(query) ||
-            article.excerpt?.toLowerCase().includes(query) ||
-            article.content?.toLowerCase().includes(query) ||
-            article.category?.toLowerCase().includes(query) ||
-            (article.tags && Array.isArray(article.tags) && article.tags.some((tag: string) => tag.toLowerCase().includes(query)))
+            article.title?.toLowerCase().includes(queryStr) ||
+            article.excerpt?.toLowerCase().includes(queryStr) ||
+            article.content?.toLowerCase().includes(queryStr) ||
+            article.category?.toLowerCase().includes(queryStr) ||
+            (article.tags && Array.isArray(article.tags) && article.tags.some((tag: string) => tag.toLowerCase().includes(queryStr)))
         );
         topicDisplay = `Resultados para: ${q}`;
     } else {
         filteredArticles = allArticles.filter(
-            (article) =>
-                (article.category && article.category.toLowerCase() === readableTopic.toLowerCase()) ||
-                (article.category && article.category.toLowerCase().replace(/\s/g, "-") === topic.toLowerCase()) ||
-                (article.tags && Array.isArray(article.tags) && article.tags.some((tag: string) => tag.toLowerCase() === readableTopic.toLowerCase()))
+            (article) => {
+                const articleCategory = article.category || "";
+                const articleCategorySlug = slugify(articleCategory);
+                const mappedArticleCategorySlug = commonMappings[articleCategorySlug] || articleCategorySlug;
+
+                const matchesCategory =
+                    articleCategory.toLowerCase() === readableTopic.toLowerCase() ||
+                    articleCategorySlug === topicSlug ||
+                    mappedArticleCategorySlug === mappedTopicSlug;
+
+                const matchesTags = article.tags && Array.isArray(article.tags) && article.tags.some((tag: string) => {
+                    const tagSlug = slugify(tag);
+                    const mappedTagSlug = commonMappings[tagSlug] || tagSlug;
+                    return tagSlug === topicSlug || mappedTagSlug === mappedTopicSlug;
+                });
+
+                return matchesCategory || matchesTags;
+            }
         );
     }
 
