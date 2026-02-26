@@ -1,11 +1,9 @@
 export function cleanContent(content: string): string {
     if (!content) return "";
 
-    // 1. Normalize line endings and handle migration artifacts
+    // 1. Normalize line endings
     let cleaned = content
         .replace(/\r\n/g, '\n')
-        .replace(/rnrn/g, '\n\n')
-        .replace(/rn/g, '\n')
         .replace(/\\n/g, '\n')
         .replace(/\\_/g, ' ');
 
@@ -34,7 +32,6 @@ export function cleanContent(content: string): string {
     // Instead of raw replacement, we'll just trim and clean whitespace
     cleaned = cleaned
         .replace(/<p>\s*<\/p>/g, '')
-        .replace(/\s*rn\s*/g, ' ') // Clean up any leftover rn
         .trim();
 
     return cleaned;

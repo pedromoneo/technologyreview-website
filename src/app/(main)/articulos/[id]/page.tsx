@@ -124,7 +124,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
 
                         <div className="prose prose-xl prose-primary max-w-none">
                             <p className="text-2xl font-bold leading-relaxed text-gray-600 mb-10 border-l-4 border-accent pl-8 italic">
-                                {article.excerpt.replace(/rnrn/g, ' ').replace(/rn/g, ' ').replace(/\\_/g, ' ')}
+                                {article.excerpt.replace(/<[^>]*>?/gm, '').replace(/rnrn/g, ' ').replace(/rn/g, ' ').replace(/\\_/g, ' ')}
                             </p>
 
                             <div

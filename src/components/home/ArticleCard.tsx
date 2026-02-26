@@ -30,7 +30,7 @@ export default function ArticleCard({ article, featured = false }: ArticleCardPr
                         {article.title}
                     </h2>
                     <p className="text-gray-300 text-lg mb-10 leading-relaxed max-w-xl">
-                        {article.excerpt}
+                        {(article.excerpt || "").replace(/<[^>]*>?/gm, "")}
                     </p>
                     <div className="flex items-center space-x-6 text-[11px] font-black uppercase tracking-widest text-accent">
                         <span>{article.author}</span>
@@ -63,7 +63,7 @@ export default function ArticleCard({ article, featured = false }: ArticleCardPr
             </h3>
 
             <p className="text-sm text-gray-500 leading-relaxed mb-6 line-clamp-3">
-                {article.excerpt}
+                {(article.excerpt || "").replace(/<[^>]*>?/gm, "")}
             </p>
 
             <div className="flex items-center space-x-3 text-[10px] font-black uppercase tracking-widest text-gray-400">
