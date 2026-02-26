@@ -12,6 +12,14 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'firebasestorage.googleapis.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'wp.technologyreview.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.technologyreview.com',
+      },
     ],
   },
 };
