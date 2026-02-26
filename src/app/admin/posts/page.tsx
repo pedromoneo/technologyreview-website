@@ -12,11 +12,13 @@ export default function AdminPostsPage() {
     const [filteredArticles, setFilteredArticles] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState("Todos");
+    const [currentPage, setCurrentPage] = useState(1);
+    const pageSize = 15;
 
     async function fetchArticles() {
         try {
             setLoading(true);
-            const q = query(collection(db, "articles"), orderBy("migratedAt", "desc"), limit(50));
+            const q = query(collection(db, "articles"), orderBy("migratedAt", "desc"), limit(200)); // Increased limit for better range
             const snapshot = await getDocs(q);
             const fetchedArticles = snapshot.docs.map(doc => ({
                 id: doc.id,
@@ -36,16 +38,20 @@ export default function AdminPostsPage() {
     }, []);
 
     useEffect(() => {
-        if (activeTab === "Todos") {
-            setFilteredArticles(articles);
-        } else if (activeTab === "Publicados") {
-            setFilteredArticles(articles.filter(a => a.status === "published" || !a.status));
+        let result = articles;
+        if (activeTab === "Publicados") {
+            result = articles.filter(a => a.status === "published" || !a.status);
         } else if (activeTab === "Borradores") {
-            setFilteredArticles(articles.filter(a => a.status === "draft"));
+            result = articles.filter(a => a.status === "draft");
         } else if (activeTab === "Destacados") {
-            setFilteredArticles(articles.filter(a => a.status === "featured"));
+            result = articles.filter(a => a.status === "featured");
         }
+        setFilteredArticles(result);
+        setCurrentPage(1); // Reset to first page when tab changes
     }, [activeTab, articles]);
+
+    const totalPages = Math.ceil(filteredArticles.length / pageSize);
+    const currentArticles = filteredArticles.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
     const handleDelete = async (id: string, title: string) => {
         if (window.confirm(`¿Estás seguro de que quieres eliminar "${title}"?`)) {
@@ -96,10 +102,12 @@ export default function AdminPostsPage() {
                                 placeholder="Filtrar contenido..."
                                 onChange={(e) => {
                                     const val = e.target.value.toLowerCase();
-                                    setFilteredArticles(articles.filter(a =>
+                                    const filtered = articles.filter(a =>
                                         a.title.toLowerCase().includes(val) ||
                                         a.author?.toLowerCase().includes(val)
-                                    ));
+                                    );
+                                    setFilteredArticles(filtered);
+                                    setCurrentPage(1);
                                 }}
                                 className="w-full bg-gray-50 border border-transparent rounded-lg pl-10 pr-4 py-2 text-[10px] font-black uppercase tracking-widest outline-none focus:border-accent focus:bg-white transition-all shadow-inner"
                             />
@@ -134,7 +142,7 @@ export default function AdminPostsPage() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50">
-                            {filteredArticles.map((article) => {
+                            {currentArticles.map((article) => {
                                 const statusInfo = getStatusInfo(article.status);
                                 return (
                                     <tr key={article.id} className="group hover:bg-gray-50/80 transition-all duration-300">
@@ -193,10 +201,24 @@ export default function AdminPostsPage() {
                 </div>
 
                 <div className="px-6 py-4 bg-gray-50/50 border-t border-gray-50 flex items-center justify-between">
-                    <p className="text-[9px] font-black uppercase tracking-widest text-gray-400">Total: {filteredArticles.length} artículos</p>
+                    <p className="text-[9px] font-black uppercase tracking-widest text-gray-400">
+                        Mostrando {Math.min(filteredArticles.length, (currentPage - 1) * pageSize + 1)}-{Math.min(filteredArticles.length, currentPage * pageSize)} de {filteredArticles.length} artículos
+                    </p>
                     <div className="flex gap-2">
-                        <button disabled className="px-3 py-1.5 bg-white border border-gray-100 rounded text-[9px] font-black uppercase tracking-widest text-gray-300 disabled:opacity-50">Anterior</button>
-                        <button disabled className="px-3 py-1.5 bg-white border border-gray-100 rounded text-[9px] font-black uppercase tracking-widest text-gray-300 disabled:opacity-50">Siguiente</button>
+                        <button
+                            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                            disabled={currentPage === 1}
+                            className="px-3 py-1.5 bg-white border border-gray-100 rounded text-[9px] font-black uppercase tracking-widest text-gray-500 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                        >
+                            Anterior
+                        </button>
+                        <button
+                            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                            disabled={currentPage === totalPages}
+                            className="px-3 py-1.5 bg-white border border-gray-100 rounded text-[9px] font-black uppercase tracking-widest text-gray-500 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                        >
+                            Siguiente
+                        </button>
                     </div>
                 </div>
             </div>

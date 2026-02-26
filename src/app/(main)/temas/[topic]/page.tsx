@@ -2,12 +2,13 @@ import { db } from "@/lib/firebase-admin";
 import ArticleCard from "@/components/home/ArticleCard";
 import { notFound } from "next/navigation";
 import { slugify } from "@/lib/content-utils";
+import Link from "next/link";
 
 export const revalidate = 60;
 
 interface TopicPageProps {
     params: Promise<{ topic: string }>;
-    searchParams: Promise<{ q?: string }>;
+    searchParams: Promise<{ q?: string; page?: string }>;
 }
 
 const commonMappings: Record<string, string> = {
@@ -18,8 +19,10 @@ const commonMappings: Record<string, string> = {
 
 export default async function TopicPage({ params, searchParams }: TopicPageProps) {
     const { topic: rawTopic } = await params;
-    const { q } = await searchParams;
+    const { q, page = "1" } = await searchParams;
     const topic = decodeURIComponent(rawTopic);
+    const currentPage = parseInt(page);
+    const pageSize = 15;
 
     if (!db) {
         console.error("Database not initialized");
@@ -27,7 +30,7 @@ export default async function TopicPage({ params, searchParams }: TopicPageProps
     }
 
     const snapshot = await db.collection("articles")
-        .limit(1000)
+        .limit(2000) // Increase limit slightly to catch more if needed, still filtered in memory
         .get();
 
     const allArticles = snapshot.docs.map(doc => {
@@ -89,11 +92,24 @@ export default async function TopicPage({ params, searchParams }: TopicPageProps
         );
     }
 
-    return renderTopicPage(topicDisplay, filteredArticles);
+    const totalArticles = filteredArticles.length;
+    const totalPages = Math.ceil(totalArticles / pageSize);
+    const startIdx = (currentPage - 1) * pageSize;
+    const paginatedArticles = filteredArticles.slice(startIdx, startIdx + pageSize);
+
+    return renderTopicPage(topicDisplay, paginatedArticles, currentPage, totalPages, topic, q);
 }
 
-function renderTopicPage(topic: string, articles: any[]) {
+function renderTopicPage(topic: string, articles: any[], currentPage: number, totalPages: number, topicSlug: string, query?: string) {
     const topicDisplay = articles[0]?.category || topic;
+
+    const getPageUrl = (page: number) => {
+        const baseUrl = `/temas/${topicSlug}`;
+        const params = new URLSearchParams();
+        if (query) params.set("q", query);
+        params.set("page", page.toString());
+        return `${baseUrl}?${params.toString()}`;
+    };
 
     return (
         <div className="pt-32 min-h-screen bg-white">
@@ -106,6 +122,11 @@ function renderTopicPage(topic: string, articles: any[]) {
                     <h1 className="text-5xl md:text-7xl font-black italic tracking-tighter uppercase text-primary">
                         {topicDisplay}
                     </h1>
+                    {totalPages > 0 && (
+                        <p className="mt-6 text-[10px] font-black uppercase tracking-widest text-gray-400">
+                            Página {currentPage} de {totalPages} — {articles.length} artículos mostrados
+                        </p>
+                    )}
                 </div>
             </header>
 
@@ -121,6 +142,60 @@ function renderTopicPage(topic: string, articles: any[]) {
                         <p className="text-gray-400 font-bold uppercase tracking-widest text-lg">
                             No se encontraron artículos en este tema.
                         </p>
+                    </div>
+                )}
+
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                    <div className="mt-32 flex items-center justify-center space-x-4">
+                        {currentPage > 1 ? (
+                            <Link
+                                href={getPageUrl(currentPage - 1)}
+                                className="px-8 py-4 border-2 border-primary text-primary text-[10px] font-black uppercase tracking-widest hover:bg-primary hover:text-white transition-all"
+                            >
+                                Anterior
+                            </Link>
+                        ) : (
+                            <span className="px-8 py-4 border-2 border-gray-100 text-gray-300 text-[10px] font-black uppercase tracking-widest cursor-not-allowed">
+                                Anterior
+                            </span>
+                        )}
+
+                        <div className="flex space-x-2">
+                            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                // Simple logic to show near pages
+                                let pageNum = i + 1;
+                                if (totalPages > 5 && currentPage > 3) {
+                                    pageNum = currentPage - 2 + i;
+                                    if (pageNum + 2 > totalPages) pageNum = totalPages - 4 + i;
+                                }
+                                if (pageNum > totalPages || pageNum < 1) return null;
+
+                                return (
+                                    <Link
+                                        key={pageNum}
+                                        href={getPageUrl(pageNum)}
+                                        className={`w-12 h-12 flex items-center justify-center text-[10px] font-black transition-all ${currentPage === pageNum ? "bg-accent text-primary" : "bg-gray-50 text-gray-400 hover:bg-gray-100"
+                                            }`}
+                                    >
+                                        {pageNum}
+                                    </Link>
+                                );
+                            })}
+                        </div>
+
+                        {currentPage < totalPages ? (
+                            <Link
+                                href={getPageUrl(currentPage + 1)}
+                                className="px-8 py-4 border-2 border-primary text-primary text-[10px] font-black uppercase tracking-widest hover:bg-primary hover:text-white transition-all"
+                            >
+                                Siguiente
+                            </Link>
+                        ) : (
+                            <span className="px-8 py-4 border-2 border-gray-100 text-gray-300 text-[10px] font-black uppercase tracking-widest cursor-not-allowed">
+                                Siguiente
+                            </span>
+                        )}
                     </div>
                 )}
             </main>
