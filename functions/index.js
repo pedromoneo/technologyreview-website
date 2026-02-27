@@ -60,6 +60,38 @@ async function translateText(text) {
 }
 
 /**
+ * Generates a LinkedIn post for the article
+ */
+async function generateSocialPost(articleData) {
+    const prompt = `
+    Actúa como un experto en redes sociales para una revista de tecnología de prestigio (MIT Technology Review en español).
+    Tu tarea es crear un post de LinkedIn atractivo basado en el siguiente artículo:
+    
+    TÍTULO: ${articleData.title}
+    EXTRACTO: ${articleData.excerpt}
+    
+    REQUISITOS DEL POST:
+    - Lenguaje profesional pero cercano y provocador.
+    - Menciona por qué esta tecnología o tendencia es importante ahora mismo.
+    - Usa máximo 3 hashtags relevantes.
+    - NO incluyas el enlace (Buffer lo añadirá).
+    - Entre 100 y 250 palabras.
+    - Escribe el post en Español de España.
+    
+    Responde ÚNICAMENTE con el texto del post.
+    `;
+
+    try {
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        return response.text().trim();
+    } catch (error) {
+        logger.error("Error generating social post:", error);
+        return articleData.excerpt || "";
+    }
+}
+
+/**
  * Common logic to fetch, translate, and sync articles
  */
 async function processEntry(entry) {
@@ -128,6 +160,14 @@ async function processEntry(entry) {
         originalId: originalId,
         language: "es",
         source: "MIT TR US"
+    };
+
+    // Generate social post
+    logger.info(`Generating social post for: ${articleData.title}`);
+    const linkedinPost = await generateSocialPost(articleData);
+    articleData.socialPosts = {
+        linkedin: linkedinPost,
+        generatedAt: new Date().toISOString()
     };
 
     // Sanitize to avoid Firestore undefined errors

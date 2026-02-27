@@ -2,12 +2,14 @@ import { db } from "@/lib/firebase-admin";
 import Link from "next/link";
 import { slugify } from "@/lib/content-utils";
 
-export const revalidate = 3600; // Cache for 1 hour
+export const dynamic = "force-dynamic";
+export const revalidate = 3600;
 
 export default async function TemasPage() {
     if (!db) return null;
 
-    const snapshot = await db.collection("articles").get();
+    // Optimize: only fetch the category field to reduce data transfer
+    const snapshot = await db.collection("articles").select("category").get();
     const categories = new Set<string>();
 
     snapshot.docs.forEach(doc => {

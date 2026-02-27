@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { slugify } from "@/lib/content-utils";
 import Link from "next/link";
 
+export const dynamic = "force-dynamic";
 export const revalidate = 600; // 10 minutes cache for topic pages
 
 interface TopicPageProps {

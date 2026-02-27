@@ -5,6 +5,10 @@
   },
   "hosting": {
     "source": ".",
+    "frameworksBackend": {
+      "region": "us-central1",
+      "memory": "1Gi"
+    },
     "ignore": [
       "firebase.json",
       "**/.*",
