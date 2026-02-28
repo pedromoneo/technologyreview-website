@@ -41,23 +41,86 @@ export default function SubscribePage() {
         }
     };
 
+    const [newsletterSuccess, setNewsletterSuccess] = useState(false);
+    const [isSubscribing, setIsSubscribing] = useState(false);
+
+    const handleNewsletterSignup = async () => {
+        if (!user) return;
+        try {
+            setIsSubscribing(true);
+            const { doc, updateDoc, setDoc } = await import("firebase/firestore");
+            const { db } = await import("@/lib/firebase");
+
+            // Update or create subscriber profile with newsletter opt-in
+            const subscriberRef = doc(db, "subscribers", user.uid);
+            await setDoc(subscriberRef, {
+                newsletterSubscribed: true,
+                newsletterSubscribedAt: new Date().toISOString(),
+                status: 'subscribed' // Added for Mailchimp extension compatibility
+            }, { merge: true });
+
+            setNewsletterSuccess(true);
+        } catch (err) {
+            console.error("Error subscribing to newsletter:", err);
+            setError("Error al suscribirse a la newsletter");
+        } finally {
+            setIsSubscribing(false);
+        }
+    };
+
     if (user) {
         return (
-            <div className="min-h-screen pt-40 pb-20 flex items-center justify-center px-6">
-                <div className="max-w-md w-full text-center">
-                    <div className="w-20 h-20 bg-accent/20 rounded-full flex items-center justify-center mx-auto mb-8">
-                        <CheckCircle2 className="w-10 h-10 text-primary" />
+            <div className="min-h-screen pt-40 pb-20 flex items-center justify-center px-6 bg-gray-50 overflow-hidden">
+                <div className="absolute top-0 right-0 w-1/2 h-full bg-accent/5 -skew-x-12 transform translate-x-1/2 pointer-events-none" />
+                <div className="max-w-xl w-full relative z-10">
+                    <div className="bg-white p-12 md:p-16 shadow-2xl border-t-8 border-primary text-center">
+                        <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-8">
+                            <CheckCircle2 className="w-10 h-10 text-emerald-500" />
+                        </div>
+
+                        <h1 className="text-4xl font-black italic tracking-tighter mb-4">¡Hola!</h1>
+                        <p className="text-lg text-primary font-black uppercase tracking-widest mb-2">
+                            El contenido de la revista es gratuito para nuestros usuarios.
+                        </p>
+                        <p className="text-gray-400 font-medium mb-10 text-sm">
+                            Ya puedes disfrutar de todos nuestros artículos sin límites.
+                        </p>
+
+                        {!newsletterSuccess ? (
+                            <button
+                                onClick={handleNewsletterSignup}
+                                disabled={isSubscribing}
+                                className="w-full bg-primary text-white p-5 font-black uppercase tracking-widest text-xs hover:bg-accent hover:text-primary transition-all shadow-xl shadow-primary/10 flex items-center justify-center group disabled:opacity-50"
+                            >
+                                {isSubscribing ? (
+                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                ) : (
+                                    <>
+                                        Pulsa aquí para suscribirte a nuestra newsletter
+                                        <ArrowRight className="ml-3 w-4 h-4 transform group-hover:translate-x-1 transition-transform" />
+                                    </>
+                                )}
+                            </button>
+                        ) : (
+                            <div className="bg-emerald-50 border border-emerald-100 p-6 rounded-xl animate-in zoom-in-95 duration-300">
+                                <p className="text-emerald-600 font-black uppercase tracking-widest text-xs">
+                                    Suscripción exitosa
+                                </p>
+                                <p className="text-emerald-500 font-medium text-[10px] mt-1 italic">
+                                    Recibirás nuestras novedades en {user.email}
+                                </p>
+                            </div>
+                        )}
+
+                        <div className="mt-12 pt-8 border-t border-gray-100">
+                            <Link
+                                href="/"
+                                className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 hover:text-primary transition-colors"
+                            >
+                                ← Volver a la portada
+                            </Link>
+                        </div>
                     </div>
-                    <h1 className="text-4xl font-black italic tracking-tighter mb-4">¡Ya estás suscrito!</h1>
-                    <p className="text-gray-500 mb-10 font-medium">
-                        Has iniciado sesión correctamente como <span className="text-primary font-bold">{user.email}</span>. Ya puedes disfrutar de todo nuestro contenido sin límites.
-                    </p>
-                    <Link
-                        href="/"
-                        className="inline-block bg-primary text-white px-10 py-4 font-black uppercase tracking-[0.2em] text-xs hover:bg-accent hover:text-primary transition-all shadow-xl shadow-primary/10"
-                    >
-                        Volver al inicio
-                    </Link>
                 </div>
             </div>
         );

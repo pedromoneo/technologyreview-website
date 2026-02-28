@@ -1,4 +1,5 @@
 import ArticleCard from "@/components/home/ArticleCard";
+import ArticleCollection from "@/components/home/ArticleCollection";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { db } from "@/lib/firebase-admin";
@@ -24,11 +25,11 @@ export default async function Home() {
     .limit(1)
     .get();
 
-  // 2. Fetch latest posts
+  // 2. Fetch latest posts (fetch more to allow for splitting)
   const latestSnap = await db.collection("articles")
     .where("status", "in", ["published", "featured"])
     .orderBy("date", "desc")
-    .limit(12)
+    .limit(20)
     .get();
 
   const allFetched = latestSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -52,14 +53,26 @@ export default async function Home() {
   }
 
   const featuredArticle = featuredData ? mapArticle(featuredData) : null;
-  const latestArticles = allFetched
-    .filter(a => a.id !== featuredArticle?.id)
-    .map(mapArticle)
-    .slice(0, 10);
+  const filteredLatest = allFetched.filter(a => a.id !== featuredArticle?.id);
 
-  // Fetch categories for sidebar
+  const latestArticles = filteredLatest.map(mapArticle);
+
+  // Split articles for insertion points
+  const first4 = latestArticles.slice(0, 4);
+  const next8 = latestArticles.slice(4, 12);
+  const remaining = latestArticles.slice(12);
+
+  // 3. Fetch categories for sidebar
   const categoriesSnap = await db.collection("settings").doc("categories").get();
   const sideTopics = categoriesSnap.exists ? (categoriesSnap.data()?.list || []) : ["Inteligencia Artificial", "Biotecnología", "Energía", "Espacio", "Sostenibilidad", "Negocios"];
+
+  // 4. Fetch Collections
+  const collectionsSnap = await db.collection("collections").orderBy("createdAt", "desc").get();
+  const allCollections = collectionsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+  const pos1Collections = allCollections.filter((c: any) => c.insertionPoint === 'pos1');
+  const pos2Collections = allCollections.filter((c: any) => c.insertionPoint === 'pos2');
+  const footerCollections = allCollections.filter((c: any) => c.insertionPoint === 'footer' || !c.insertionPoint);
 
   return (
     <div className="flex flex-col pt-28">
@@ -108,12 +121,46 @@ export default async function Home() {
               <div className="flex-1 h-[1px] bg-gray-100" />
             </div>
 
+            {/* Grid 1: First 4 Articles */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-20">
-              {latestArticles.map((article) => (
+              {first4.map((article) => (
                 <ArticleCard key={article.id} article={article as any} />
               ))}
-              {/* More articles would go here */}
             </div>
+
+            {/* Insertion Point 1: After 4 articles */}
+            {pos1Collections.length > 0 && (
+              <div className="my-24 -mx-6 lg:-mx-24 lg:w-[calc(100%+12rem)]">
+                {pos1Collections.map(coll => (
+                  <ArticleCollection key={coll.id} collectionId={coll.id} />
+                ))}
+              </div>
+            )}
+
+            {/* Grid 2: Next 8 Articles */}
+            <div className={`grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-20 ${pos1Collections.length > 0 ? '' : 'mt-20'}`}>
+              {next8.map((article) => (
+                <ArticleCard key={article.id} article={article as any} />
+              ))}
+            </div>
+
+            {/* Insertion Point 2: After 12 articles */}
+            {pos2Collections.length > 0 && (
+              <div className="my-24 -mx-6 lg:-mx-24 lg:w-[calc(100%+12rem)]">
+                {pos2Collections.map(coll => (
+                  <ArticleCollection key={coll.id} collectionId={coll.id} />
+                ))}
+              </div>
+            )}
+
+            {/* Grid 3: Remaining Articles */}
+            {remaining.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-20 mt-20">
+                {remaining.map((article) => (
+                  <ArticleCard key={article.id} article={article as any} />
+                ))}
+              </div>
+            )}
 
             <div className="mt-24 text-center">
               <button className="border-2 border-primary text-primary px-12 py-4 font-black uppercase tracking-[0.2em] text-[11px] hover:bg-primary hover:text-white transition-all">
@@ -123,6 +170,11 @@ export default async function Home() {
           </div>
         </div>
       </section>
+
+      {/* Footer Collections (Insert Point 3) */}
+      {footerCollections.map(coll => (
+        <ArticleCollection key={coll.id} collectionId={coll.id} />
+      ))}
 
       {/* Newsletter Section */}
       <section className="bg-primary py-32 text-white relative overflow-hidden">

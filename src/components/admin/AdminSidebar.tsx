@@ -12,7 +12,8 @@ import {
     LogOut,
     ExternalLink,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
+    LayoutTemplate
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 
@@ -28,8 +29,10 @@ export default function AdminSidebar({ isCollapsed, onToggle }: AdminSidebarProp
     const mainItems = [
         { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
         { label: "Artículos", href: "/admin/posts", icon: FileText },
+        { label: "Colecciones", href: "/admin/collections", icon: LayoutTemplate },
         { label: "Estudios", href: "/admin/estudios", icon: BookOpen },
         { label: "Páginas", href: "/admin/pages", icon: Layers },
+        { label: "Suscriptores", href: "/admin/subscribers", icon: Users },
     ];
 
     const settingsItems = [

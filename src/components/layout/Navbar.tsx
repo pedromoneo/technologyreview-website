@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Search, User, X, ChevronDown, Menu } from "lucide-react";
+import { Search, User, X, ChevronDown, Menu, ShieldCheck, LogOut } from "lucide-react";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -9,12 +9,17 @@ import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { slugify } from "@/lib/content-utils";
 
+import { useAuth } from "@/lib/auth-context";
+
 export default function Navbar() {
+    const { user, isAdmin, logout } = useAuth();
     const [isScrolled, setIsScrolled] = useState(false);
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const router = useRouter();
+
+    // ... rest of state
 
     const [topics, setTopics] = useState<string[]>([]);
     const [isTemasOpen, setIsTemasOpen] = useState(false);
@@ -126,9 +131,34 @@ export default function Navbar() {
                             >
                                 <Search className="w-5 h-5 text-primary" />
                             </button>
-                            <Link href="/admin" className="hidden md:block p-2 hover:bg-gray-100 rounded-full transition-colors" aria-label="Admin">
-                                <User className="w-5 h-5 text-gray-400 hover:text-primary transition-colors" />
-                            </Link>
+                            {user ? (
+                                <div className="relative group">
+                                    <button className="p-2 hover:bg-gray-100 rounded-full transition-colors order-last group">
+                                        <div className="w-6 h-6 bg-accent/20 rounded-full flex items-center justify-center text-primary font-black text-[10px]">
+                                            {user.email?.[0].toUpperCase()}
+                                        </div>
+                                    </button>
+                                    <div className="absolute top-full right-0 mt-2 w-48 bg-white border border-gray-100 shadow-2xl rounded-xl py-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 translate-y-2 group-hover:translate-y-0">
+                                        {isAdmin && (
+                                            <Link href="/admin" className="px-5 py-2.5 hover:bg-gray-50 text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-3">
+                                                <ShieldCheck className="w-3.5 h-3.5 text-accent" />
+                                                Panel Admin
+                                            </Link>
+                                        )}
+                                        <button
+                                            onClick={() => logout()}
+                                            className="w-full text-left px-5 py-2.5 hover:bg-gray-50 text-[10px] font-black uppercase tracking-widest text-red-500 flex items-center gap-3"
+                                        >
+                                            <LogOut className="w-3.5 h-3.5" />
+                                            Cerrar Sesión
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <Link href="/login" className="p-2 hover:bg-gray-100 rounded-full transition-colors flex items-center justify-center" aria-label="Login">
+                                    <User className="w-5 h-5 text-gray-400 hover:text-primary transition-colors" />
+                                </Link>
+                            )}
                         </div>
                     </div>
                 </div>

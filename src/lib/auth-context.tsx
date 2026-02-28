@@ -12,7 +12,7 @@ import {
     signInWithEmailLink,
 } from 'firebase/auth'
 import { auth, db } from './firebase'
-import { collection, query, where, getDocs } from 'firebase/firestore'
+import { collection, query, where, getDocs, doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { getFunctions, httpsCallable } from 'firebase/functions'
 
 // Fallback super admin
@@ -22,6 +22,7 @@ interface AuthContextType {
     user: User | null
     loading: boolean
     isAdmin: boolean
+    isSubscriber: boolean
     loginWithGoogle: () => Promise<void>
     loginWithOTP: (email: string) => Promise<void>
     logout: () => Promise<void>
@@ -33,19 +34,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null)
     const [loading, setLoading] = useState(true)
     const [isAdmin, setIsAdmin] = useState(false)
+    const [isSubscriber, setIsSubscriber] = useState(false)
 
     useEffect(() => {
         // Handle Email Link Sign-in
         const checkEmailLink = async () => {
             if (isSignInWithEmailLink(auth, window.location.href)) {
-                let email = window.localStorage.getItem('emailForSignIn')
+                let email = typeof window !== 'undefined' ? window.localStorage.getItem('emailForSignIn') : null
                 if (!email) {
                     email = window.prompt('Please provide your email for confirmation')
                 }
                 if (email) {
                     try {
                         await signInWithEmailLink(auth, email, window.location.href)
-                        window.localStorage.removeItem('emailForSignIn')
+                        if (typeof window !== 'undefined') window.localStorage.removeItem('emailForSignIn')
                     } catch (error) {
                         console.error('Error signing in with email link:', error)
                     }
@@ -58,15 +60,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setUser(authUser)
 
             if (authUser?.email) {
-                // Check if user is super admin
-                if (SUPER_ADMINS.includes(authUser.email)) {
+                const normalizedEmail = authUser.email.toLowerCase();
+
+                // 1. Check Admin Status (CMS)
+                if (SUPER_ADMINS.includes(normalizedEmail)) {
                     setIsAdmin(true)
                 } else {
-                    // Check Firestore for authorization
                     try {
                         const q = query(
                             collection(db, 'authorized_users'),
-                            where('email', '==', authUser.email.toLowerCase())
+                            where('email', '==', normalizedEmail)
                         )
                         const snapshot = await getDocs(q)
                         setIsAdmin(!snapshot.empty)
@@ -75,8 +78,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                         setIsAdmin(false)
                     }
                 }
+
+                // 2. Check & Sync Subscriber Status (Magazine)
+                try {
+                    const subscriberRef = doc(db, 'subscribers', authUser.uid);
+                    const subscriberSnap = await getDoc(subscriberRef);
+
+                    if (!subscriberSnap.exists()) {
+                        // Create basic subscriber profile
+                        await setDoc(subscriberRef, {
+                            email: normalizedEmail,
+                            displayName: authUser.displayName || '',
+                            createdAt: serverTimestamp(),
+                            lastLogin: serverTimestamp(),
+                            status: 'active'
+                        }, { merge: true });
+                        setIsSubscriber(true);
+                    } else {
+                        // Update last login
+                        await setDoc(subscriberRef, {
+                            lastLogin: serverTimestamp()
+                        }, { merge: true });
+                        setIsSubscriber(true);
+                    }
+                } catch (error) {
+                    console.error('Error syncing subscriber status:', error)
+                    setIsSubscriber(false)
+                }
             } else {
                 setIsAdmin(false)
+                setIsSubscriber(false)
             }
 
             setLoading(false)
@@ -111,6 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             user,
             loading,
             isAdmin,
+            isSubscriber,
             loginWithGoogle,
             loginWithOTP,
             logout

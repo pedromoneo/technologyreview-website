@@ -9,6 +9,20 @@
                     "order": "ASCENDING"
                 },
                 {
+                    "fieldPath": "date",
+                    "order": "DESCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "articles",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "status",
+                    "order": "ASCENDING"
+                },
+                {
                     "fieldPath": "migratedAt",
                     "order": "DESCENDING"
                 }
