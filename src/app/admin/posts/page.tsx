@@ -18,7 +18,7 @@ export default function AdminPostsPage() {
     async function fetchArticles() {
         try {
             setLoading(true);
-            const q = query(collection(db, "articles"), orderBy("migratedAt", "desc"), limit(200)); // Increased limit for better range
+            const q = query(collection(db, "articles"), orderBy("date", "desc"), limit(200)); // Sort by date
             const snapshot = await getDocs(q);
             const fetchedArticles = snapshot.docs.map(doc => ({
                 id: doc.id,
@@ -153,9 +153,12 @@ export default function AdminPostsPage() {
                                                 </div>
                                                 <div className="overflow-hidden">
                                                     <p className="text-[11px] font-black uppercase tracking-tight line-clamp-2 max-w-sm mb-0.5">{article.title}</p>
-                                                    <div className="flex items-center space-x-1.5">
+                                                    <div className="flex items-center space-x-1.5 flex-wrap gap-y-1">
                                                         <span className={`w-1.5 h-1.5 rounded-full ${statusInfo.color}`} />
                                                         <span className={`text-[8px] font-black uppercase tracking-widest ${statusInfo.textColor}`}>{statusInfo.label}</span>
+                                                        {article.isFeaturedInHeader && (
+                                                            <span className="bg-accent text-primary text-[7px] font-black px-1.5 py-0.5 rounded-sm ml-2 tracking-widest">PORTADA</span>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>

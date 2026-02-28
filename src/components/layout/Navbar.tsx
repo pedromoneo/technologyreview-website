@@ -116,7 +116,7 @@ export default function Navbar() {
 
                         {/* Right: Actions */}
                         <div className="flex items-center justify-end space-x-6">
-                            <Link href="/suscribirse" className="hidden sm:block bg-accent text-primary text-[10px] font-black px-6 py-2.5 uppercase tracking-widest hover:bg-primary hover:text-white transition-all">
+                            <Link href="/subscribe" className="hidden sm:block bg-accent text-primary text-[10px] font-black px-6 py-2.5 uppercase tracking-widest hover:bg-primary hover:text-white transition-all">
                                 Suscríbete
                             </Link>
                             <button
@@ -243,7 +243,7 @@ export default function Navbar() {
 
                     <div className="p-6 bg-gray-50 border-t border-gray-100">
                         <Link
-                            href="/suscribirse"
+                            href="/subscribe"
                             onClick={() => setIsMenuOpen(false)}
                             className="block w-full bg-primary text-white text-center py-4 rounded-xl text-xs font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:bg-accent hover:text-primary transition-all active:scale-95"
                         >

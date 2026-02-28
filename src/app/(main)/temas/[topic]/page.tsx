@@ -31,8 +31,8 @@ export default async function TopicPage({ params, searchParams }: TopicPageProps
     }
 
     const snapshot = await db.collection("articles")
-        .orderBy("migratedAt", "desc")
-        .limit(500) // Efficient limit for search/topic fallback
+        .orderBy("date", "desc")
+        .limit(500)
         .get();
 
     const allArticles = snapshot.docs.map(doc => {
@@ -48,9 +48,8 @@ export default async function TopicPage({ params, searchParams }: TopicPageProps
             date: data.date || "",
             readingTime: data.readingTime || "1 min",
             imageUrl: data.imageUrl || "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&q=80&w=800",
-            migratedAt: data.migratedAt ? (data.migratedAt.toDate ? data.migratedAt.toDate() : new Date(data.migratedAt)) : new Date(0),
         };
-    }).sort((a, b) => b.migratedAt.getTime() - a.migratedAt.getTime());
+    });
 
     let filteredArticles = [];
     let topicDisplay = "";

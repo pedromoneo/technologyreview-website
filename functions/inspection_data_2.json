@@ -1,0 +1,347 @@
+{
+  "id": 1133734,
+  "legacy_id": 0,
+  "title": "The Download: how America lost its lead in the hunt for alien life, and ambitious battery claims",
+  "status": "published",
+  "type": "article",
+  "published": "2026-02-26T08:10:00+00:00",
+  "modified": "2026-02-26 07:58:40",
+  "first_published": "2026-02-26T08:10:00+00:00",
+  "url": "https://www.technologyreview.com/2026/02/26/1133734/the-download-how-america-lost-its-lead-in-the-hunt-for-alien-life-and-ambitious-battery-claims/",
+  "custom_slug": "the-download-how-america-lost-its-lead-in-the-hunt-for-alien-life-and-ambitious-battery-claims",
+  "creator": {
+    "username": "",
+    "email": ""
+  },
+  "dek": "<p>Plus: OpenAI says that Chinese law enforcement tried to get ChatGPT to plan an online political campaign</p>\n",
+  "byline": [
+    {
+      "text": "Rhiannon Williams",
+      "slug": "rhiannon-williams",
+      "profile": {
+        "name": "Rhiannon Williams",
+        "slug": "rhiannon-williams",
+        "url": "",
+        "bio": "Rhiannon Williams writes The Download, the only newsletter in tech you need to read every day. She’s also a news reporter.\r\nBefore joining MIT Technology Review, she was technology correspondent at the i newspaper and a technology reporter at the Telegraph. She was shortlisted at the 2021 British Journalism Awards and regularly appears as an expert on the BBC."
+      }
+    }
+  ],
+  "story_type": [],
+  "eyebrow_type": "topic_taxonomy",
+  "topic": {
+    "taxonomy": "channel",
+    "name": "The Download",
+    "slug": "download-newsletter"
+  },
+  "subtopic": "",
+  "images": [
+    {
+      "id": 1133736,
+      "url": "https://wp.technologyreview.com/wp-content/uploads/2026/02/image_e4dd46.png?w=150&h=150&crop=1",
+      "mimetype": "image/png",
+      "filesize": 4387914,
+      "width": 3000,
+      "height": 1687,
+      "alt": ""
+    }
+  ],
+  "attachments": {},
+  "topper": {},
+  "body": [
+    {
+      "type": "html",
+      "data": "\n<p><em>This is today's edition of <a href=\"https://forms.technologyreview.com/newsletters/briefing-the-download/?_ga=2.179569122.736533416.1649661040-405833893.1649413289\">The Download</a></em>,<em> our weekday newsletter that provides a daily dose of what's going on in the world of technology.</em></p>\n"
+    },
+    {
+      "type": "html",
+      "data": "\n\n"
+    },
+    {
+      "type": "html",
+      "data": "\n<p class=\"has-medium-font-size\"><strong>America was winning the race to find Martian life. Then China jumped in.</strong></p>\n"
+    },
+    {
+      "type": "html",
+      "data": "\n\n"
+    },
+    {
+      "type": "html",
+      "data": "\n<p>In July 2024, NASA’s Perseverance rover came across a peculiar rocky outcrop on Mars covered in strange spots. On Earth, these marks are almost always produced by microbial life.</p>\n"
+    },
+    {
+      "type": "html",
+      "data": "\n\n"
+    },
+    {
+      "type": "html",
+      "data": "\n<p>Sure, those specks are not definitive proof of alien life. But they are the best hint yet that life may not be a one-off event in the cosmos.<br><br>But the only way to know for sure is to bring a sample of that rock home to study.<br><br>Now, just over a year and a half later, the project to do so is on life support, with zero funding flowing in 2026 and little backing left in Congress. As a result, those oh-so-promising rocks may be stuck out there forever.<br><br>This also means that, in the race to find evidence of alien life, America has effectively ceded its pole position to its greatest geopolitical rival: China. The superpower is moving full steam ahead with its own version of the mission to bring the rock samples home. It’s leaner than America and Europe’s mission, and the rock samples it will snatch from Mars will likely not be as high quality. But that won’t be the headline people remember—the one in the scientific journals and the history books.<br><br>Nearly a dozen project insiders and scientists in both the US and China shared with me the story of how America blew its lead in the new space race. It’s full of wild dreams and promising discoveries—as well as mismanagement, eye-watering costs, and, ultimately, anger and disappointment. <a href=\"https://www.technologyreview.com/2026/02/26/1133584/america-china-mars-sample-return-space-race-nasa/?utm_source=the_download&amp;utm_medium=email&amp;utm_campaign=the_download.unpaid.engagement&amp;utm_term=*%7CSUBCLASS%7C*&amp;utm_content=*%7CDATE:m-d-Y%7C*\">Read the full story</a>.</p>\n"
+    },
+    {
+      "type": "html",
+      "data": "\n\n"
+    },
+    {
+      "type": "html",
+      "data": "\n<p><em>—Robin George Andrews</em></p>\n"
+    },
+    {
+      "type": "html",
+      "data": "\n\n"
+    },
+    {
+      "type": "html",
+      "data": "\n<p><strong>This article is also part of the Big Story series: <em>MIT Technology Review</em>’s most important, ambitious reporting. The stories in the series take a deep look at the technologies that are coming next and what they will mean for us and the world we live in. </strong><a href=\"https://www.technologyreview.com/tag/the-big-story?utm_source=the_download&amp;utm_medium=email&amp;utm_campaign=the_download.unpaid.engagement&amp;utm_term=*%7CSUBCLASS%7C*&amp;utm_content=*%7CDATE:m-d-Y%7C*\"><strong>Check out the rest of them here</strong></a><strong>.</strong></p>\n"
+    },
+    {
+      "type": "html",
+      "data": "\n\n"
+    },
+    {
+      "type": "html",
+      "data": "\n<p></p>\n"
+    },
+    {
+      "type": "html",
+      "data": "\n\n"
+    },
+    {
+      "type": "html",
+      "data": "\n<p class=\"has-medium-font-size\"><strong>This company claims a battery breakthrough. Now they need to prove it.</strong></p>\n"
+    },
+    {
+      "type": "html",
+      "data": "\n\n"
+    },
+    {
+      "type": "html",
+      "data": "\n<p>When a company claims to have created what’s essentially the holy grail of batteries, there are bound to be some questions.</p>\n"
+    },
+    {
+      "type": "html",
+      "data": "\n\n"
+    },
+    {
+      "type": "html",
+      "data": "\n<p>Interest has been swirling since Donut Lab, a Finnish company, announced last month that it had a new solid-state battery technology, one that was ready for large-scale production. The company said its batteries can charge super-fast and have a high energy density that would translate to ultra-long-range EVs. What’s more, it claimed the cells can operate safely in the extreme heat and cold, contain “green and abundant materials,” and would cost less than lithium-ion batteries do today.</p>\n"
+    },
+    {
+      "type": "html",
+      "data": "\n\n"
+    },
+    {
+      "type": "html",
+      "data": "\n<p>It sounded amazing—this sort of technology could transform the EV industry. But many quickly wondered if it was all too good to be true. <a href=\"https://www.technologyreview.com/2026/02/26/1133722/solid-state-batteries-donut-lab/?utm_source=the_download&amp;utm_medium=email&amp;utm_campaign=the_download.unpaid.engagement&amp;utm_term=*%7CSUBCLASS%7C*&amp;utm_content=*%7CDATE:m-d-Y%7C*\">Let’s dig into why this company is making news, why many experts are skeptical, and what it all means for the battery industry right now</a>.</p>\n"
+    },
+    {
+      "type": "html",
+      "data": "\n\n"
+    },
+    {
+      "type": "html",
+      "data": "\n<p><em>—Casey Crownhart</em></p>\n"
+    },
+    {
+      "type": "html",
+      "data": "\n\n"
+    },
+    {
+      "type": "html",
+      "data": "\n<p><strong>This article is from The Spark, <em>MIT Technology Review</em>’s weekly climate newsletter. To receive it in your inbox every Wednesday, </strong><a href=\"https://forms.technologyreview.com/newsletters/climate-energy-the-spark/?utm_source=the_download&amp;utm_medium=email&amp;utm_campaign=the_download.unpaid.engagement&amp;utm_term=*%7CSUBCLASS%7C*&amp;utm_content=*%7CDATE:m-d-Y%7C*\"><strong>sign up here</strong></a>.</p>\n"
+    },
+    {
+      "type": "html",
+      "data": "\n\n"
+    },
+    {
+      "type": "html",
+      "data": "\n<p></p>\n"
+    },
+    {
+      "type": "html",
+      "data": "\n\n"
+    },
+    {
+      "type": "html",
+      "data": "\n<p class=\"has-medium-font-size\"><strong>The must-reads</strong></p>\n"
+    },
+    {
+      "type": "html",
+      "data": "\n\n"
+    },
+    {
+      "type": "html",
+      "data": "\n<p><em>I’ve combed the internet to find you today’s most fun/important/scary/fascinating stories about technology.</em></p>\n"
+    },
+    {
+      "type": "html",
+      "data": "\n\n"
+    },
+    {
+      "type": "html",
+      "data": "\n<p><strong>1 Chinese law enforcement tried to get ChatGPT to discredit Japan’s prime minister</strong><br>OpenAI claims the chatbot refused to help plan an online smear campaign. (<a href=\"https://www.axios.com/2026/02/25/openai-chatgpt-china-japan-prime-minister\">Axios</a>)<br>+ <em>The user asked ChatGPT to edit status reports on covert influence operations. </em>(<a href=\"https://www.bloomberg.com/news/articles/2026-02-26/openai-says-chatgpt-refused-to-help-chinese-influence-operations?srnd=phx-technology\">Bloomberg</a> $)</p>\n"
+    },
+    {
+      "type": "html",
+      "data": "\n\n"
+    },
+    {
+      "type": "html",
+      "data": "\n<p><strong>2 Meta’s AI is sending junk tips to child abuse investigators</strong><br>Not only are they a serious drain on resources—they’re hindering investigations. (<a href=\"https://www.theguardian.com/technology/2026/feb/25/meta-ai-junk-child-abuse-tips-doj\">The Guardian</a>)<br>+ <em>US investigators are using AI to detect child abuse images made by AI. </em>(<a href=\"https://www.technologyreview.com/2025/09/26/1124343/us-investigators-are-using-ai-to-detect-child-abuse-images-made-by-ai/?utm_source=the_download&amp;utm_medium=email&amp;utm_campaign=the_download.unpaid.engagement&amp;utm_term=*%7CSUBCLASS%7C*&amp;utm_content=*%7CDATE:m-d-Y%7C*\">MIT Technology Review</a>)<br><br><strong>3 A judge has dismissed xAI’s lawsuit against OpenAI</strong><br>Elon Musk’s startup has failed to prove that its rival committed any misconduct. (<a href=\"https://arstechnica.com/tech-policy/2026/02/judge-xai-cant-claim-openai-stole-trade-secrets-just-by-hiring-ex-staffers/\">Ars Technica</a>)<br>+ <em>xAI had accused former employees of taking trade secrets to OpenAI. </em>(<a href=\"https://www.reuters.com/world/us-judge-dismisses-xai-trade-secrets-lawsuit-against-rival-openai-now-2026-02-24/\">Reuters</a>)<br>+ <em>It could refile, but would need to modify its claims. </em>(<a href=\"https://www.theverge.com/ai-artificial-intelligence/884049/openai-elon-musk-xai-trade-secrets-lawsuit\">The Verge</a>)<strong><br><br>4 China appears to be masking regular drone flights<br></strong>In what could be rehearsals for a potential invasion of Taiwan. (<a href=\"https://www.reuters.com/world/china/how-china-is-masking-drone-flights-potential-taiwan-rehearsal-2026-02-26/\">Reuters</a>)<br>+ <em>Taiwan’s “silicon shield” could be weakening. </em>(<a href=\"https://www.technologyreview.com/2025/08/15/1121358/taiwan-silicon-shield-tsmc-china-chip-manufacturing/?utm_source=the_download&amp;utm_medium=email&amp;utm_campaign=the_download.unpaid.engagement&amp;utm_term=*%7CSUBCLASS%7C*&amp;utm_content=*%7CDATE:m-d-Y%7C*\">MIT Technology Review</a>)<strong><br><br>5 Pro-AI super PACs are raising huge sums ahead of the US midterm elections</strong><br>They’re making significantly higher sums than their pro-regulation counterparts. (<a href=\"https://www.ft.com/content/c1823595-d0f6-49a4-8a10-3d91c92da8f6\">FT</a> $)<br>+ <em>Anthropic is backing a regulation-friendly PAC group called Public First Action. </em>(<a href=\"https://www.nytimes.com/2026/02/23/technology/ai-pac-ad-blitz.html\">NYT</a> $<strong>)</strong></p>\n"
+    },
+    {
+      "type": "html",
+      "data": "\n\n"
+    },
+    {
+      "type": "html",
+      "data": "\n<p><strong>6 Experts are worried about AI slop videos’ effects on child development<br></strong>The nonsensical clips tend to lack structure and confuse children.(<a href=\"https://www.nytimes.com/2026/02/26/us/ai-videos-children-youtube.html\">NYT</a> $)</p>\n"
+    },
+    {
+      "type": "html",
+      "data": "\n\n"
+    },
+    {
+      "type": "html",
+      "data": "\n<p><strong>7 Around 400 million people are living with long covid<br></strong>And its effects are rippling far beyond its physical symptoms. (<a href=\"https://www.bloomberg.com/news/features/2026-02-25/how-long-do-covid-s-effects-last-brain-issues-are-still-being-found?srnd=phx-businessweek\">Bloomberg</a> $)<br>+ <em>Scientists are finding signals of long covid in blood. They could lead to new treatments. </em>(<a href=\"https://www.technologyreview.com/2024/01/19/1086874/long-covid-biomarkers-treatments-complement-system/?utm_source=the_download&amp;utm_medium=email&amp;utm_campaign=the_download.unpaid.engagement&amp;utm_term=*%7CSUBCLASS%7C*&amp;utm_content=*%7CDATE:m-d-Y%7C*\">MIT Technology Review</a>)</p>\n"
+    },
+    {
+      "type": "html",
+      "data": "\n\n"
+    },
+    {
+      "type": "html",
+      "data": "\n<p><strong>8 Tech bros are opting out of interviews with mainstream media<br></strong>And gravitating toward much less critical online streams. (<a href=\"https://www.newyorker.com/culture/the-lede/tbpn-and-the-rise-of-the-tech-friendly-talk-show?_sp=4eae5fb1-cd41-470a-90d1-f9777c7fa04a.1772105596515\">New Yorker</a> $)</p>\n"
+    },
+    {
+      "type": "html",
+      "data": "\n\n"
+    },
+    {
+      "type": "html",
+      "data": "\n<p><strong>9 The ISS is surprisingly vulnerable</strong><br>There’s a major gap in its critical defenses. (<a href=\"https://www.wired.com/story/this-is-the-worst-thing-that-could-happen-to-the-international-space-station/\">Wired</a> $)<br>+ <em>Data centers are heading to space, and our laws aren’t ready. </em>(<a href=\"https://restofworld.org/2026/orbital-data-centers-ai-sovereignty/\">Rest of World</a>)<br>+ <em>Meet the astronaut training tourists to fly in the world’s first commercial space station. </em>(<a href=\"https://www.technologyreview.com/2026/01/12/1130817/vast-astronaut-drew-feustel-nasa-space-station/?utm_source=the_download&amp;utm_medium=email&amp;utm_campaign=the_download.unpaid.engagement&amp;utm_term=*%7CSUBCLASS%7C*&amp;utm_content=*%7CDATE:m-d-Y%7C*\">MIT Technology Review</a>)</p>\n"
+    },
+    {
+      "type": "html",
+      "data": "\n\n"
+    },
+    {
+      "type": "html",
+      "data": "\n<p> <strong>10 We’ve lost our appetite for fake meat 🍔</strong><br>Even plant-based meat makers are admitting some products don’t taste great. (<a href=\"https://www.economist.com/business/2026/02/26/the-fake-meat-industry-is-in-trouble\">Economist</a> $)<br>+ <em>The price of (real) beef has soared recently. </em>(<a href=\"https://www.theguardian.com/us-news/ng-interactive/2026/feb/25/beef-packers-under-fire-prices-soar\">The Guardian</a>)<br>+ <em>Here’s what a lab-grown burger tastes like. </em>(<a href=\"https://www.technologyreview.com/2023/05/25/1073590/lab-grown-burger-taste-cultured-meat/?utm_source=the_download&amp;utm_medium=email&amp;utm_campaign=the_download.unpaid.engagement&amp;utm_term=*%7CSUBCLASS%7C*&amp;utm_content=*%7CDATE:m-d-Y%7C*\">MIT Technology Review</a>)</p>\n"
+    },
+    {
+      "type": "html",
+      "data": "\n\n"
+    },
+    {
+      "type": "html",
+      "data": "\n<p></p>\n"
+    },
+    {
+      "type": "html",
+      "data": "\n\n"
+    },
+    {
+      "type": "html",
+      "data": "\n<p class=\"has-medium-font-size\"><strong>Quote of the day</strong></p>\n"
+    },
+    {
+      "type": "html",
+      "data": "\n\n"
+    },
+    {
+      "type": "html",
+      "data": "\n<p class=\"has-large-font-size\"><strong>“We are using carrots and sticks.”</strong></p>\n"
+    },
+    {
+      "type": "html",
+      "data": "\n\n"
+    },
+    {
+      "type": "html",
+      "data": "\n<p>—Seth Besmertnik, chief executive of digital marketing startup Conductor, explains his approach to vigorously vetting his workers’ AI literacy to <a href=\"https://www.wsj.com/tech/ai/tech-firms-arent-just-encouraging-their-workers-to-use-ai-theyre-enforcing-it-d43ebf84?mod=tech_trendingnow_article_pos2\">the Wall Street Journal</a>.</p>\n"
+    },
+    {
+      "type": "html",
+      "data": "\n\n"
+    },
+    {
+      "type": "html",
+      "data": "\n<p></p>\n"
+    },
+    {
+      "type": "html",
+      "data": "\n\n"
+    },
+    {
+      "type": "html",
+      "data": "\n<p class=\"has-medium-font-size\"><strong>One more thing</strong></p>\n"
+    },
+    {
+      "type": "html",
+      "data": "\n\n"
+    },
+    {
+      "type": "html",
+      "data": "\n<figure class=\"wp-block-image size-full\"><a href=\"https://www.technologyreview.com/2023/08/18/1077537/menstruation-mystery/?utm_source=the_download&amp;utm_medium=email&amp;utm_campaign=the_download.unpaid.engagement&amp;utm_term=*%7CSUBCLASS%7C*&amp;utm_content=*%7CDATE:m-d-Y%7C*\"><img src=\"https://wp.technologyreview.com/wp-content/uploads/2026/02/image_e4dd46.png\" alt=\"\" class=\"wp-image-1133736\"/></a></figure>\n"
+    },
+    {
+      "type": "html",
+      "data": "\n\n"
+    },
+    {
+      "type": "html",
+      "data": "\n<p><strong>Tiny faux organs could crack the mystery of menstruation</strong></p>\n"
+    },
+    {
+      "type": "html",
+      "data": "\n\n"
+    },
+    {
+      "type": "html",
+      "data": "\n<p>No one is entirely sure how—or why—the human body choreographs menstruation; the monthly dance of cellular birth, maturation, and death. Many people desperately need treatments to make their period more manageable, but it’s difficult for scientists to design medications without understanding how menstruation really works.<br><br>That understanding could be in the works, thanks to endometrial organoids—biomedical tools made from bits of the tissue that lines the uterus, called the endometrium. Organoids have already provided insights into how endometrial cells communicate and coordinate, and why menstruation is routine for some people and fraught for others—and some researchers are hopeful that these early results mark the dawn of a new era. <a href=\"https://www.technologyreview.com/2023/08/18/1077537/menstruation-mystery/?utm_source=the_download&amp;utm_medium=email&amp;utm_campaign=the_download.unpaid.engagement&amp;utm_term=*%7CSUBCLASS%7C*&amp;utm_content=*%7CDATE:m-d-Y%7C*\">Read the full story</a>.</p>\n"
+    },
+    {
+      "type": "html",
+      "data": "\n\n"
+    },
+    {
+      "type": "html",
+      "data": "\n<p><em>—Saima Sidik</em></p>\n"
+    },
+    {
+      "type": "html",
+      "data": "\n\n"
+    },
+    {
+      "type": "html",
+      "data": "\n<p></p>\n"
+    },
+    {
+      "type": "html",
+      "data": "\n\n"
+    },
+    {
+      "type": "html",
+      "data": "\n<p class=\"has-medium-font-size\"><strong>We can still have nice things</strong></p>\n"
+    },
+    {
+      "type": "html",
+      "data": "\n\n"
+    },
+    {
+      "type": "html",
+      "data": "\n<p><em>A place for comfort, fun and distraction to brighten up your day. (Got any ideas? </em><a href=\"mailto:rhiannon.williams@technologyreview.com\"><em>Drop me a line</em></a><em> or </em><a href=\"https://bsky.app/profile/rhiannonwilliams.bsky.social\"><em>skeet 'em at me</em></a><em>.)</em></p>\n"
+    },
+    {
+      "type": "html",
+      "data": "\n\n"
+    },
+    {
+      "type": "html",
+      "data": "\n<p>+ The crazy but true story about the<em> Elder Scrolls III </em>fans who <a href=\"https://arstechnica.com/gaming/2026/02/inside-the-quixotic-team-trying-to-build-an-entire-world-in-a-20-year-old-game/\">built a world the size of a small country</a> into it.<br>+ How to master the tricky art of making the <a href=\"https://www.foodandwine.com/sourdough-tips-from-pro-bakers-11907782\">perfect sourdough loaf</a>.<br>+ This adorable <a href=\"https://www.youtube.com/watch?v=Q2ua2luJW00\">Pika</a> is the real-life inspiration for Pikachu.<br>+  How many of these <a href=\"https://www.empireonline.com/movies/features/best-animated-movies/\">animated classics</a> have you seen?</p>\n"
+    }
+  ],
+  "word_count": 1168,
+  "summary_items": [],
+  "exclude_from_feed": false
+}

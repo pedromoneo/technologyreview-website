@@ -1,0 +1,173 @@
+{
+  "id": 1133707,
+  "legacy_id": 0,
+  "title": "Finding value with AI and Industry 5.0 transformation",
+  "status": "published",
+  "type": "article",
+  "published": "2026-02-26T10:00:59+00:00",
+  "modified": "2026-02-26 10:01:00",
+  "first_published": "2026-02-26T10:00:59+00:00",
+  "url": "https://www.technologyreview.com/2026/02/26/1133707/finding-value-with-ai-and-industry-5-0-transformation/",
+  "custom_slug": "finding-value-with-ai-and-industry-5-0-transformation",
+  "creator": {
+    "username": "",
+    "email": ""
+  },
+  "dek": "<p>The promise of Industry 5.0 can be realized by breaking down data silos and reimagining technology architectures to enable human-centric digital operations.</p>\n",
+  "byline": [
+    {
+      "text": "MIT Technology Review Insights",
+      "slug": "mit-technology-review-insights",
+      "profile": {
+        "name": "MIT Technology Review Insights",
+        "slug": "mit-technology-review-insights",
+        "url": "",
+        "bio": "Insights is the custom publishing division of <i>MIT Technology Review</i>. We conduct qualitative and quantitative research and analysis in the US and abroad and publish a wide variety of content, including articles, reports, infographics, videos, and podcasts. For more information, please contact <a href=\"mailto:insights@technologyreview.com\">insights@technologyreview.com</a>."
+      }
+    }
+  ],
+  "story_type": [],
+  "eyebrow_type": "topic_taxonomy",
+  "topic": {
+    "taxonomy": "channel",
+    "name": "Artificial intelligence",
+    "slug": "artificial-intelligence"
+  },
+  "subtopic": "",
+  "images": [
+    {
+      "id": 1133714,
+      "url": "https://wp.technologyreview.com/wp-content/uploads/2026/02/MITTR_V1_EY32026Cover1200Socials.png?w=150&h=150&crop=1",
+      "mimetype": "image/png",
+      "filesize": 296763,
+      "width": 1200,
+      "height": 675,
+      "alt": ""
+    },
+    {
+      "id": 1133715,
+      "url": "https://wp.technologyreview.com/wp-content/uploads/2026/02/MIT_EY3_V8-revCoverPage.png?w=150&h=150&crop=1",
+      "mimetype": "image/png",
+      "filesize": 463047,
+      "width": 2480,
+      "height": 3189,
+      "alt": ""
+    },
+    {
+      "id": 1133717,
+      "url": "https://wp.technologyreview.com/wp-content/uploads/2026/02/MITTR_V1_EY32026SocialsCard3.png?w=150&h=150&crop=1",
+      "mimetype": "image/png",
+      "filesize": 131230,
+      "width": 1200,
+      "height": 675,
+      "alt": ""
+    }
+  ],
+  "attachments": {},
+  "topper": {},
+  "body": [
+    {
+      "type": "html",
+      "data": "\n<p>For years, Industry 4.0 transformation has centered on the convergence of intelligent technologies like AI, cloud, the internet of things, robotics, and digital twins. Industry 5.0 marks a pivotal shift from integrating emerging technologies to orchestrating them at scale. With Industry 5.0, the purpose of this interconnected web of technologies is more nuanced: to augment human potential, not just automate work, and enhance environmental sustainability.</p>\n"
+    },
+    {
+      "type": "html",
+      "data": "\n\n"
+    },
+    {
+      "type": "html",
+      "data": "\n<figure class=\"wp-block-image alignright size-large\"><a href=\"https://wp.technologyreview.com/wp-content/uploads/2026/02/MIT_EY3_V10.pdf\" target=\"_blank\" rel=\" noreferrer noopener\"><img src=\"https://wp.technologyreview.com/wp-content/uploads/2026/02/MIT_EY3_V8-revCoverPage.png?w=1555\" alt=\"\" class=\"wp-image-1133715\"/></a></figure>\n"
+    },
+    {
+      "type": "html",
+      "data": "\n\n"
+    },
+    {
+      "type": "html",
+      "data": "\n<p>Industry 5.0 has ushered in a radically new level of collaboration between humans and machines, one that removes data silos and optimizes infrastructure, operations, and resource use to disrupt business models and create new forms of enterprise value. But without discipline in tracking value creation, investments risk being wasted on incremental efficiency gains rather than strategic growth.</p>\n"
+    },
+    {
+      "type": "html",
+      "data": "\n\n"
+    },
+    {
+      "type": "html",
+      "data": "\n<div class=\"wp-block-buttons\">\n<div class=\"wp-block-button has-custom-width wp-block-button__width-auto is-style-fill\"><a class=\"wp-block-button__link has-mittr-white-color has-text-color has-background has-custom-font-size wp-element-button\" href=\"https://wp.technologyreview.com/wp-content/uploads/2026/02/MIT_EY3_V10.pdf\" style=\"border-radius:4px;background-color:#1071a5;font-size:16px\" target=\"_blank\" rel=\"noreferrer noopener\">DOWNLOAD THE REPORT</a></div>\n</div>\n"
+    },
+    {
+      "type": "html",
+      "data": "\n\n"
+    },
+    {
+      "type": "html",
+      "data": "\n<p>“To realize the promise of Industry 5.0, companies must move beyond cost and efficiency to focus on growth, resilience, and human-centric outcomes,” says Sachin Lulla, EY Americas industrials and energy transformation leader. “This requires not just new technologies, but new ways of working—where people and machines collaborate, and where value is measured not just in dollars saved, but in new opportunities created.”</p>\n"
+    },
+    {
+      "type": "html",
+      "data": "\n\n"
+    },
+    {
+      "type": "html",
+      "data": "\n<p>An MIT Technology Review Insights survey of 250 industry leaders from around the world reveals most industrial investments still target efficiency. And while the data shows human-centric and sustainable use cases deliver higher value, they are underfunded. The research shows most organizations are not realizing the full value potential of Industry 5.0 due to a combination of:</p>\n"
+    },
+    {
+      "type": "html",
+      "data": "\n\n"
+    },
+    {
+      "type": "html",
+      "data": "\n<p>• Culture, skills, and collaboration barriers.<br>• Tactical and misaligned technology investments.<br>• Use-case prioritization focused on efficiency over growth, sustainability, and well-being.</p>\n"
+    },
+    {
+      "type": "html",
+      "data": "\n\n"
+    },
+    {
+      "type": "html",
+      "data": "\n<figure class=\"wp-block-image size-full\"><a href=\"https://wp.technologyreview.com/wp-content/uploads/2026/02/MIT_EY3_V10.pdf\" target=\"_blank\" rel=\" noreferrer noopener\"><img src=\"https://wp.technologyreview.com/wp-content/uploads/2026/02/MITTR_V1_EY32026SocialsCard3.png\" alt=\"\" class=\"wp-image-1133717\"/></a></figure>\n"
+    },
+    {
+      "type": "html",
+      "data": "\n\n"
+    },
+    {
+      "type": "html",
+      "data": "\n<p>The barrier to achieving Industry 5.0 transformation is not only about fixing the technology, according to research from EY and Saïd Business School at the University of Oxford, it is also about bolstering human-centric elements like strategy, culture, and leadership. Companies are investing heavily in digital transformation, but not always in ways that unlock the full human potential of Industry 5.0.</p>\n"
+    },
+    {
+      "type": "html",
+      "data": "\n\n"
+    },
+    {
+      "type": "html",
+      "data": "\n<p>“We’re not just doing digital work for work’s sake, what I call ‘chasing the digital fairies,’” says Chris Ware, general manager, iron ore digital, Rio Tinto. “We have to be very clear on what pieces of work we go after and why. Every domain has a unique roadmap about how to deliver the best value.”</p>\n"
+    },
+    {
+      "type": "html",
+      "data": "\n\n"
+    },
+    {
+      "type": "html",
+      "data": "\n<p><em><a href=\"https://wp.technologyreview.com/wp-content/uploads/2026/02/MIT_EY3_V10.pdf\" target=\"_blank\" rel=\"noreferrer noopener\">Download the full report.</a></em></p>\n"
+    },
+    {
+      "type": "html",
+      "data": "\n\n"
+    },
+    {
+      "type": "html",
+      "data": "\n<p><em>This content was produced by Insights, the custom content arm of MIT Technology Review. It was not written by MIT Technology Review’s editorial staff. It was researched, designed, and written by human writers, editors, analysts, and illustrators. This includes the writing of surveys and collection of data for surveys. AI tools that may have been used were limited to secondary production processes that passed thorough human review.</em></p>\n"
+    },
+    {
+      "type": "html",
+      "data": "\n\n"
+    },
+    {
+      "type": "html",
+      "data": "\n<p></p>\n"
+    }
+  ],
+  "word_count": 447,
+  "summary_items": [],
+  "exclude_from_feed": false
+}

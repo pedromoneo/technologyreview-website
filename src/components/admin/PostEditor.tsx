@@ -28,6 +28,7 @@ export default function PostEditor({ postId }: PostEditorProps) {
         author: "Redacción",
         imageUrl: "",
         status: "draft",
+        isFeaturedInHeader: false,
         date: new Date().toISOString().split("T")[0],
         readingTime: "5 min",
         tags: ""
@@ -48,9 +49,13 @@ export default function PostEditor({ postId }: PostEditorProps) {
             }
         };
         fetchSettings();
+    }, []);
 
-        if (postId) {
-            const fetchPost = async () => {
+    useEffect(() => {
+        if (!postId) return;
+
+        const fetchPost = async () => {
+            try {
                 const docRef = doc(db, "articles", postId);
                 const docSnap = await getDoc(docRef);
                 if (docSnap.exists()) {
@@ -63,15 +68,18 @@ export default function PostEditor({ postId }: PostEditorProps) {
                         author: data.author || "Redacción",
                         imageUrl: data.imageUrl || "",
                         status: data.status || "draft",
+                        isFeaturedInHeader: data.isFeaturedInHeader || false,
                         date: data.date || new Date().toISOString().split("T")[0],
                         readingTime: data.readingTime || "5 min",
                         tags: (data.tags || []).join(", ")
                     });
                 }
-            };
-            fetchPost();
-        }
-    }, [postId, categories.length]);
+            } catch (error) {
+                console.error("Error fetching article:", error);
+            }
+        };
+        fetchPost();
+    }, [postId, categories]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -139,6 +147,28 @@ export default function PostEditor({ postId }: PostEditorProps) {
                     {loading ? "..." : "Guardar"}
                 </button>
             </div>
+
+            {/* Featured in Header Banner */}
+            {formData.isFeaturedInHeader && (
+                <div className="bg-accent/10 border border-accent/20 rounded-xl p-4 flex items-center justify-between">
+                    <div className="flex items-center space-x-3 text-primary">
+                        <div className="bg-accent p-2 rounded-lg">
+                            <Layout className="w-4 h-4" />
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-widest">Destacado en Cabecera</p>
+                            <p className="text-[9px] font-bold text-primary/60 uppercase tracking-widest">Este artículo aparecerá en la posición principal de la home.</p>
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => setFormData(p => ({ ...p, isFeaturedInHeader: false }))}
+                        className="text-[9px] font-black uppercase tracking-widest text-primary/40 hover:text-rose-500 transition-colors"
+                    >
+                        Quitar
+                    </button>
+                </div>
+            )}
 
             <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-100 space-y-8">
                 {/* Title and Excerpt */}
@@ -269,6 +299,17 @@ export default function PostEditor({ postId }: PostEditorProps) {
                                 <option value="published">Publicado</option>
                                 <option value="featured">Destacado</option>
                             </select>
+                            <button
+                                type="button"
+                                onClick={() => setFormData(p => ({ ...p, isFeaturedInHeader: !p.isFeaturedInHeader }))}
+                                className={`w-full rounded-lg px-2 py-2 text-[9px] font-black uppercase tracking-widest outline-none border transition-all flex items-center justify-center gap-2 ${formData.isFeaturedInHeader
+                                    ? "bg-accent text-primary border-accent shadow-sm"
+                                    : "bg-gray-50 text-gray-400 border-transparent hover:border-gray-200"
+                                    }`}
+                            >
+                                <Layout className="w-3 h-3" />
+                                {formData.isFeaturedInHeader ? "En Portada" : "Poner en Portada"}
+                            </button>
                             <select
                                 name="category"
                                 value={formData.category}

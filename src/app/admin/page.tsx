@@ -24,7 +24,7 @@ export default function AdminDashboard() {
     useEffect(() => {
         async function fetchArticles() {
             try {
-                const q = query(collection(db, "articles"), orderBy("migratedAt", "desc"), limit(5));
+                const q = query(collection(db, "articles"), orderBy("date", "desc"), limit(5));
                 const snapshot = await getDocs(q);
                 const fetchedArticles = snapshot.docs.map(doc => ({
                     id: doc.id,

@@ -17,28 +17,45 @@ export default async function Home() {
     );
   }
 
-  const snapshot = await db.collection("articles")
+  // 1. Fetch featured post if any
+  const featuredSnap = await db.collection("articles")
     .where("status", "in", ["published", "featured"])
-    .orderBy("migratedAt", "desc")
-    .limit(10)
+    .where("isFeaturedInHeader", "==", true)
+    .limit(1)
     .get();
 
-  const articles = snapshot.docs.map(doc => {
-    const data = doc.data();
-    return {
-      id: doc.id,
-      title: data.title || "",
-      excerpt: data.excerpt || "",
-      category: data.category || "General",
-      author: data.author || "Redacción",
-      date: data.date || "",
-      readingTime: data.readingTime || "1 min",
-      imageUrl: data.imageUrl || "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&q=80&w=800",
-    };
+  // 2. Fetch latest posts
+  const latestSnap = await db.collection("articles")
+    .where("status", "in", ["published", "featured"])
+    .orderBy("date", "desc")
+    .limit(12)
+    .get();
+
+  const allFetched = latestSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  let featuredData = featuredSnap.docs.length > 0 ? { id: featuredSnap.docs[0].id, ...featuredSnap.docs[0].data() } : null;
+
+  // Map to common structure
+  const mapArticle = (data: any) => ({
+    id: data.id,
+    title: data.title || "",
+    excerpt: data.excerpt || "",
+    category: data.category || "General",
+    author: data.author || "Redacción",
+    date: data.date || "",
+    readingTime: data.readingTime || "1 min",
+    imageUrl: data.imageUrl || "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&q=80&w=800",
   });
 
-  const featuredArticle = articles[0] || null;
-  const latestArticles = articles.slice(1);
+  // If no manual featured, pick the first from latest
+  if (!featuredData && allFetched.length > 0) {
+    featuredData = allFetched[0];
+  }
+
+  const featuredArticle = featuredData ? mapArticle(featuredData) : null;
+  const latestArticles = allFetched
+    .filter(a => a.id !== featuredArticle?.id)
+    .map(mapArticle)
+    .slice(0, 10);
 
   // Fetch categories for sidebar
   const categoriesSnap = await db.collection("settings").doc("categories").get();
@@ -77,9 +94,9 @@ export default async function Home() {
               <div className="mt-20 p-8 bg-muted border-t-4 border-primary">
                 <h4 className="text-xl font-black mb-4 leading-tight tracking-tighter">Acceso Ilimitado</h4>
                 <p className="text-sm text-gray-500 mb-6 font-medium">Suscríbete para leer todas nuestras historias sin límites.</p>
-                <button className="w-full bg-primary text-white py-3 text-[10px] font-black uppercase tracking-[0.2em] hover:bg-accent hover:text-primary transition-colors">
-                  Ver Planes
-                </button>
+                <Link href="/subscribe" className="w-full bg-primary text-white py-3 text-[10px] font-black uppercase tracking-[0.2em] hover:bg-accent hover:text-primary transition-colors flex items-center justify-center">
+                  Suscríbete
+                </Link>
               </div>
             </div>
           </aside>

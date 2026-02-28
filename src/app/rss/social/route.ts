@@ -38,7 +38,7 @@ export async function GET(request: Request) {
     try {
         const snapshot = await db.collection("articles")
             .where("status", "in", ["published", "featured"])
-            .orderBy("migratedAt", "desc")
+            .orderBy("date", "desc")
             .limit(30)
             .get();
 
@@ -63,7 +63,7 @@ export async function GET(request: Request) {
                 description: `<div>${imageUrl && !imageUrl.includes('?') ? `<img src="${imageUrl}" style="max-width:100%; margin-bottom: 20px;" /><br/>` : ""}${data.excerpt || data.title || ""}</div>`,
                 url: `${siteUrl}/${data.slug || doc.id}`,
                 guid: doc.id,
-                date: parseRSSDate(data.migratedAt || data.date),
+                date: parseRSSDate(data.date || data.migratedAt),
                 custom_elements: []
             };
 

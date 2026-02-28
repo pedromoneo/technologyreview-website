@@ -13,6 +13,7 @@ import {
 } from 'firebase/auth'
 import { auth, db } from './firebase'
 import { collection, query, where, getDocs } from 'firebase/firestore'
+import { getFunctions, httpsCallable } from 'firebase/functions'
 
 // Fallback super admin
 export const SUPER_ADMINS = ['pedro.moneo@gmail.com']
@@ -90,12 +91,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const loginWithOTP = async (email: string) => {
-        const actionCodeSettings = {
-            url: window.location.href,
-            handleCodeInApp: true,
-        }
-        await sendSignInLinkToEmail(auth, email, actionCodeSettings)
-        window.localStorage.setItem('emailForSignIn', email)
+        const functions = getFunctions();
+        const sendMagicLink = httpsCallable(functions, 'sendMagicLink');
+
+        await sendMagicLink({
+            email: email.toLowerCase().trim(),
+            url: window.location.origin + '/subscribe'
+        });
+
+        window.localStorage.setItem('emailForSignIn', email.toLowerCase().trim());
     }
 
     const logout = async () => {

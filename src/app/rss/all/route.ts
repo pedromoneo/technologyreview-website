@@ -44,7 +44,7 @@ export async function GET(request: Request) {
     try {
         const snapshot = await db.collection("articles")
             .where("status", "in", ["published", "featured"])
-            .orderBy("migratedAt", "desc")
+            .orderBy("date", "desc")
             .limit(10)
             .get();
 
@@ -68,7 +68,7 @@ export async function GET(request: Request) {
                 guid: doc.id,
                 categories: [data.category || "General"],
                 author: data.author || "Redacción",
-                date: parseRSSDate(data.migratedAt || data.date),
+                date: parseRSSDate(data.date || data.migratedAt),
                 custom_elements: [
                     { "content:encoded": data.excerpt || "" }
                 ],

@@ -1,5 +1,5 @@
 const { onSchedule } = require("firebase-functions/v2/scheduler");
-const { onRequest } = require("firebase-functions/v2/https");
+const { onRequest, onCall } = require("firebase-functions/v2/https");
 const { setGlobalOptions } = require("firebase-functions");
 const admin = require("firebase-admin");
 const axios = require("axios");
@@ -245,5 +245,66 @@ exports.manualSync = onRequest({ maxInstances: 1, timeoutSeconds: 540 }, async (
     } catch (error) {
         logger.error("Manual sync error", error);
         res.status(500).send(error.toString());
+    }
+});
+
+/**
+ * Sends a Magic Link via Resend
+ */
+exports.sendMagicLink = onCall({
+    secrets: ["RESEND_API_KEY"],
+    maxInstances: 10
+}, async (request) => {
+    const { email, url } = request.data;
+
+    if (!email) {
+        throw new Error("El email es obligatorio");
+    }
+
+    try {
+        const actionCodeSettings = {
+            url: url || "https://technologyreview.es/subscribe",
+            handleCodeInApp: true,
+        };
+
+        const link = await admin.auth().generateSignInWithEmailLink(email, actionCodeSettings);
+
+        const { Resend } = require("resend");
+        const resendApiKey = process.env.RESEND_API_KEY;
+
+        if (!resendApiKey) {
+            throw new Error("RESEND_API_KEY no configurada");
+        }
+
+        const resend = new Resend(resendApiKey);
+
+        await resend.emails.send({
+            from: "MIT Technology Review <onboarding@resend.dev>", // TODO: Update to verified domain
+            to: email,
+            subject: "Tu enlace de acceso a MIT Technology Review",
+            html: `
+                <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px; color: #1a1a1a; background-color: #ffffff; border-top: 8px solid #000000;">
+                    <h1 style="font-size: 28px; font-weight: 900; font-style: italic; letter-spacing: -0.05em; margin-bottom: 24px; text-transform: uppercase;">MIT Technology Review</h1>
+                    <p style="font-size: 16px; line-height: 1.6; margin-bottom: 32px; color: #4b5563;">
+                        Has solicitado un enlace de acceso para entrar en tu cuenta de MIT Technology Review en español. 
+                        Haz clic en el botón de abajo para iniciar sesión de forma segura.
+                    </p>
+                    <a href="${link}" style="display: inline-block; background-color: #000000; color: #ffffff; padding: 16px 32px; font-size: 14px; font-weight: 900; text-decoration: none; text-transform: uppercase; letter-spacing: 0.1em; transition: background-color 0.2s ease;">
+                        Iniciar Sesión
+                    </a>
+                    <p style="font-size: 14px; line-height: 1.6; margin-top: 32px; color: #9ca3af;">
+                        Este enlace caducará en breve. Si no has solicitado este acceso, puedes ignorar este email de forma segura.
+                    </p>
+                    <div style="margin-top: 48px; padding-top: 24px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #9ca3af; text-align: center;">
+                        <p>&copy; ${new Date().getFullYear()} MIT Technology Review en español</p>
+                    </div>
+                </div>
+            `
+        });
+
+        return { success: true };
+    } catch (error) {
+        logger.error("Error enviando Magic Link:", error);
+        throw new Error("No se pudo enviar el email de acceso");
     }
 });
