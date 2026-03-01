@@ -1,14 +1,40 @@
 export function cleanExcerpt(excerpt: string): string {
     if (!excerpt) return "";
-    return excerpt
-        .replace(/<[^>]*>?/gm, '') // Remove HTML tags
-        .replace(/rnrnrn/g, ' ')
-        .replace(/rnrn/g, ' ')
-        .replace(/rn/g, ' ')
-        .replace(/\\r\\n|\\n|\r\n|\n/g, ' ')
-        .replace(/\\_/g, ' ')
-        .replace(/\s+/g, ' ')
+
+    // 1. Initial cleanup of artifacts and HTML
+    let cleaned = excerpt
+        .replace(/<[^>]*>?/gm, "") // Remove HTML tags
+        .replace(/rnrnrn/g, " ")
+        .replace(/rnrn/g, " ")
+        .replace(/rn/g, " ")
+        .replace(/\\r\\n|\\n|\r\n|\n/g, " ")
+        .replace(/\\_/g, " ")
+        .replace(/\s+/g, " ")
         .trim();
+
+    // 2. Logic to handle truncation: if it ends with "..." or has no sentence punctuation at the end
+    // We want to find the last '.', '!', or '?' and cut there if the text seems truncated.
+    const hasEllipsis = cleaned.endsWith("...");
+    const lastChar = cleaned.slice(-1);
+    const isPunctuation = [".", "!", "?", '”', '"'].includes(lastChar);
+
+    if (hasEllipsis || !isPunctuation) {
+        // Remove trailing dots first
+        cleaned = cleaned.replace(/\.+\s*$/, "");
+
+        // Find last sentence end
+        const lastSentenceEnd = Math.max(
+            cleaned.lastIndexOf("."),
+            cleaned.lastIndexOf("!"),
+            cleaned.lastIndexOf("?")
+        );
+
+        if (lastSentenceEnd > 20) { // Only trim if we have a reasonable amount of text left
+            cleaned = cleaned.substring(0, lastSentenceEnd + 1);
+        }
+    }
+
+    return cleaned.trim();
 }
 
 export function cleanContent(content: string): string {
