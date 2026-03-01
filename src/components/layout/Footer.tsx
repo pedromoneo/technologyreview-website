@@ -29,9 +29,9 @@ export default function Footer() {
                         <div className="mt-12 space-y-4">
                             <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Legal</h4>
                             <div className="flex flex-wrap gap-x-6 gap-y-2 text-[10px] font-black uppercase tracking-widest text-white/40">
-                                <Link href="#" className="hover:text-accent transition-colors">Términos y Condiciones</Link>
-                                <Link href="#" className="hover:text-accent transition-colors">Política de Privacidad</Link>
-                                <Link href="#" className="hover:text-accent transition-colors">Cookies</Link>
+                                <Link href="/terminos-y-condiciones" className="hover:text-accent transition-colors">Términos y Condiciones</Link>
+                                <Link href="/politica-de-privacidad" className="hover:text-accent transition-colors">Política de Privacidad</Link>
+                                <Link href="/cookies" className="hover:text-accent transition-colors">Cookies</Link>
                             </div>
                         </div>
                     </div>
