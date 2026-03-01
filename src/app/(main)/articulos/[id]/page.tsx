@@ -123,42 +123,55 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
                         </div>
 
                         <div className="prose prose-xl prose-primary max-w-none">
-                            {article.excerpt && (
-                                <p className="text-2xl font-bold leading-relaxed text-gray-600 mb-10 border-l-4 border-accent pl-8 italic">
-                                    {cleanExcerpt(article.excerpt)}
-                                </p>
-                            )}
+                            {(() => {
+                                const cleaned = cleanContent(article.content);
+                                const plainExcerpt = cleanExcerpt(article.excerpt);
 
-                            <div
-                                className="space-y-8 text-gray-800 text-lg leading-loose font-medium article-content"
-                                dangerouslySetInnerHTML={{
-                                    __html: DOMPurify.sanitize(
-                                        (() => {
-                                            const cleaned = cleanContent(article.content);
-                                            const plainExcerpt = cleanExcerpt(article.excerpt);
+                                let destacadoText = plainExcerpt;
+                                let bodyContent = cleaned;
 
-                                            if (plainExcerpt.length > 20) {
-                                                // Try to find if the first paragraph of the content contains a large part of the excerpt
-                                                const firstPEnd = cleaned.indexOf('</p>');
-                                                if (firstPEnd !== -1) {
-                                                    const firstP = cleaned.substring(0, firstPEnd + 4);
-                                                    const plainFirstP = firstP.replace(/<[^>]*>?/gm, '').replace(/\s+/g, ' ').trim();
+                                // Detect first paragraph
+                                const firstPEnd = cleaned.indexOf('</p>');
+                                if (firstPEnd !== -1 && plainExcerpt.length > 20) {
+                                    const firstP = cleaned.substring(0, firstPEnd + 4);
+                                    const plainFirstP = firstP.replace(/<[^>]*>?/gm, '').replace(/\s+/g, ' ').trim();
 
-                                                    // if first 50 chars of excerpt are in first paragraph
-                                                    if (plainFirstP.includes(plainExcerpt.substring(0, 50))) {
-                                                        return cleaned.substring(firstPEnd + 4);
-                                                    }
-                                                }
-                                            }
-                                            return cleaned;
-                                        })(),
-                                        {
-                                            ADD_TAGS: ["figure", "figcaption", "img", "iframe"],
-                                            ADD_ATTR: ["src", "alt", "class", "width", "height", "loading", "allow", "allowfullscreen", "frameborder"]
+                                    // if the first paragraph contains the excerpt (meaning the excerpt is a prefix),
+                                    // OR if the excerpt contains the first 100 chars of the first paragraph,
+                                    // we have a duplication.
+                                    const matchLimit = Math.min(50, plainExcerpt.length);
+                                    if (plainFirstP.includes(plainExcerpt.substring(0, matchLimit))) {
+                                        // Use the full first paragraph as the destacado if it's more complete
+                                        if (plainFirstP.length >= plainExcerpt.length) {
+                                            destacadoText = plainFirstP;
                                         }
-                                    )
-                                }}
-                            />
+                                        // Remove it from the body
+                                        bodyContent = cleaned.substring(firstPEnd + 4);
+                                    }
+                                }
+
+                                return (
+                                    <>
+                                        {destacadoText && (
+                                            <p className="text-2xl font-bold leading-relaxed text-gray-600 mb-10 border-l-4 border-accent pl-8 italic">
+                                                {destacadoText}
+                                            </p>
+                                        )}
+                                        <div
+                                            className="space-y-8 text-gray-800 text-lg leading-loose font-medium article-content"
+                                            dangerouslySetInnerHTML={{
+                                                __html: DOMPurify.sanitize(
+                                                    bodyContent,
+                                                    {
+                                                        ADD_TAGS: ["figure", "figcaption", "img", "iframe"],
+                                                        ADD_ATTR: ["src", "alt", "class", "width", "height", "loading", "allow", "allowfullscreen", "frameborder"]
+                                                    }
+                                                )
+                                            }}
+                                        />
+                                    </>
+                                );
+                            })()}
                         </div>
 
                         {/* Social Share */}
