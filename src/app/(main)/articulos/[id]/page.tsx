@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { Clock, User, Share2, Facebook, Twitter, Linkedin, ArrowLeft } from "lucide-react";
-import { cleanContent } from "@/lib/content-utils";
+import { cleanContent, cleanExcerpt } from "@/lib/content-utils";
 import DOMPurify from "isomorphic-dompurify";
 
 export const revalidate = 3600; // 1 hour revalidation
@@ -123,17 +123,40 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
                         </div>
 
                         <div className="prose prose-xl prose-primary max-w-none">
-                            <p className="text-2xl font-bold leading-relaxed text-gray-600 mb-10 border-l-4 border-accent pl-8 italic">
-                                {article.excerpt.replace(/<[^>]*>?/gm, '').replace(/rnrn/g, ' ').replace(/rn/g, ' ').replace(/\\_/g, ' ')}
-                            </p>
+                            {article.excerpt && (
+                                <p className="text-2xl font-bold leading-relaxed text-gray-600 mb-10 border-l-4 border-accent pl-8 italic">
+                                    {cleanExcerpt(article.excerpt)}
+                                </p>
+                            )}
 
                             <div
                                 className="space-y-8 text-gray-800 text-lg leading-loose font-medium article-content"
                                 dangerouslySetInnerHTML={{
-                                    __html: DOMPurify.sanitize(cleanContent(article.content), {
-                                        ADD_TAGS: ["figure", "figcaption", "img", "iframe"],
-                                        ADD_ATTR: ["src", "alt", "class", "width", "height", "loading", "allow", "allowfullscreen", "frameborder"]
-                                    })
+                                    __html: DOMPurify.sanitize(
+                                        (() => {
+                                            const cleaned = cleanContent(article.content);
+                                            const plainExcerpt = cleanExcerpt(article.excerpt);
+
+                                            if (plainExcerpt.length > 20) {
+                                                // Try to find if the first paragraph of the content contains a large part of the excerpt
+                                                const firstPEnd = cleaned.indexOf('</p>');
+                                                if (firstPEnd !== -1) {
+                                                    const firstP = cleaned.substring(0, firstPEnd + 4);
+                                                    const plainFirstP = firstP.replace(/<[^>]*>?/gm, '').replace(/\s+/g, ' ').trim();
+
+                                                    // if first 50 chars of excerpt are in first paragraph
+                                                    if (plainFirstP.includes(plainExcerpt.substring(0, 50))) {
+                                                        return cleaned.substring(firstPEnd + 4);
+                                                    }
+                                                }
+                                            }
+                                            return cleaned;
+                                        })(),
+                                        {
+                                            ADD_TAGS: ["figure", "figcaption", "img", "iframe"],
+                                            ADD_ATTR: ["src", "alt", "class", "width", "height", "loading", "allow", "allowfullscreen", "frameborder"]
+                                        }
+                                    )
                                 }}
                             />
                         </div>

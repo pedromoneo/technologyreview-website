@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Article } from "@/data/mock-articles";
+import { cleanExcerpt } from "@/lib/content-utils";
 
 interface ArticleCardProps {
     article: Article;
@@ -30,7 +31,7 @@ export default function ArticleCard({ article, featured = false }: ArticleCardPr
                         {article.title}
                     </h2>
                     <p className="text-gray-300 text-lg mb-10 leading-relaxed max-w-xl">
-                        {(article.excerpt || "").replace(/<[^>]*>?/gm, "")}
+                        {cleanExcerpt(article.excerpt)}
                     </p>
                     <div className="flex items-center space-x-6 text-[11px] font-black uppercase tracking-widest text-accent">
                         <span>{article.author}</span>
@@ -63,7 +64,7 @@ export default function ArticleCard({ article, featured = false }: ArticleCardPr
             </h3>
 
             <p className="text-sm text-gray-500 leading-relaxed mb-6 line-clamp-3">
-                {(article.excerpt || "").replace(/<[^>]*>?/gm, "")}
+                {cleanExcerpt(article.excerpt)}
             </p>
 
             <div className="flex items-center space-x-3 text-[10px] font-black uppercase tracking-widest text-gray-400">
