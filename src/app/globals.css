@@ -71,6 +71,33 @@ h6 {
   margin-bottom: 0.75rem;
 }
 
+.article-content figure,
+.article-content>img,
+.article-content iframe {
+  margin-top: 4rem;
+  margin-bottom: 4rem;
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+}
+
+/* If img is inside figure, don't double the margin */
+.article-content figure img {
+  margin-top: 0;
+  margin-bottom: 0;
+  border-radius: 4px;
+}
+
+.article-content figcaption {
+  font-size: 0.8rem;
+  color: var(--muted-foreground);
+  margin-top: 0.4rem;
+  text-align: center;
+  font-style: italic;
+  line-height: 1.4;
+}
+
 .article-content a {
   color: var(--primary);
   text-decoration: underline;
