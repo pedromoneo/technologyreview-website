@@ -1,10 +1,12 @@
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { onRequest, onCall } = require("firebase-functions/v2/https");
+const { onDocumentWritten } = require("firebase-functions/v2/firestore");
 const { setGlobalOptions } = require("firebase-functions");
 const admin = require("firebase-admin");
 const axios = require("axios");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const logger = require("firebase-functions/logger");
+const crypto = require("crypto");
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -306,5 +308,88 @@ exports.sendMagicLink = onCall({
     } catch (error) {
         logger.error("Error enviando Magic Link:", error);
         throw new Error("No se pudo enviar el email de acceso");
+    }
+});
+
+/**
+ * Syncs Firestore subscribers to Mailchimp
+ */
+exports.syncSubscriberToMailchimp = onDocumentWritten({
+    document: "subscribers/{subscriberId}",
+    secrets: ["MAILCHIMP_API_KEY", "MAILCHIMP_AUDIENCE_ID"]
+}, async (event) => {
+    const newData = event.data.after ? event.data.after.data() : null;
+    const oldData = event.data.before ? event.data.before.data() : null;
+
+    if (!newData || !newData.email) {
+        logger.info("No data or email found, skipping Mailchimp sync");
+        return;
+    }
+
+    // Only sync if pertinent fields changed
+    const hasChanged = !oldData ||
+        oldData.newsletterSubscribed !== newData.newsletterSubscribed ||
+        oldData.displayName !== newData.displayName ||
+        oldData.email !== newData.email;
+
+    if (!hasChanged) {
+        logger.info(`No changes for ${newData.email}, skipping Mailchimp sync`);
+        return;
+    }
+
+    const apiKey = process.env.MAILCHIMP_API_KEY;
+    const listId = process.env.MAILCHIMP_AUDIENCE_ID;
+
+    if (!apiKey || !listId) {
+        logger.error("Mailchimp API Key or List ID missing in environment variables");
+        return;
+    }
+
+    try {
+        const datacenter = apiKey.split("-")[1];
+        const emailHash = crypto.createHash("md5").update(newData.email.toLowerCase()).digest("hex");
+        const url = `https://${datacenter}.api.mailchimp.com/3.0/lists/${listId}/members/${emailHash}`;
+
+        // Prepare the base payload for the update/upsert
+        const payload = {
+            email_address: newData.email,
+            merge_fields: {
+                FNAME: newData.displayName || ""
+            }
+        };
+
+        // Logic for subscription status:
+        // 1. If Firestore explicitly says true -> set as 'subscribed'
+        // 2. If Firestore explicitly says false -> set as 'unsubscribed'
+        // 3. If Firestore doesn't mention it (standard login profile creation),
+        //    we use status_if_new: 'unsubscribed' but we DON'T send 'status'
+        //    so that if they ALREADY exist in Mailchimp, their current status is preserved.
+
+        if (newData.newsletterSubscribed === true) {
+            payload.status = "subscribed";
+            payload.status_if_new = "subscribed";
+        } else if (newData.newsletterSubscribed === false) {
+            payload.status = "unsubscribed";
+            payload.status_if_new = "unsubscribed";
+        } else {
+            // User just logged in, we don't know their preference from the app yet.
+            // If they are NEW to Mailchimp, they will be unsubscribed by default.
+            // If they ALREADY exist, Mailchimp will keep their status because we DON'T send the 'status' field here.
+            payload.status_if_new = "unsubscribed";
+        }
+
+        logger.info(`Syncing ${newData.email} to Mailchimp. Preserving status if exists.`);
+
+        await axios.put(url, payload, {
+            headers: {
+                Authorization: `Bearer ${apiKey}`
+            }
+        });
+
+        logger.info(`Mailchimp sync success for ${newData.email}`);
+    } catch (error) {
+        // Log detailed error from Mailchimp but don't crash the function
+        const errorData = error.response ? error.response.data : error.message;
+        logger.error(`Mailchimp sync error for ${newData.email}:`, errorData);
     }
 });
