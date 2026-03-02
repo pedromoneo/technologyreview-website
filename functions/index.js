@@ -337,8 +337,8 @@ exports.syncSubscriberToMailchimp = onDocumentWritten({
         return;
     }
 
-    const apiKey = process.env.MAILCHIMP_API_KEY;
-    const listId = process.env.MAILCHIMP_AUDIENCE_ID;
+    const apiKey = (process.env.MAILCHIMP_API_KEY || "").trim();
+    const listId = (process.env.MAILCHIMP_AUDIENCE_ID || "").trim();
 
     if (!apiKey || !listId) {
         logger.error("Mailchimp API Key or List ID missing in environment variables");
@@ -347,6 +347,10 @@ exports.syncSubscriberToMailchimp = onDocumentWritten({
 
     try {
         const datacenter = apiKey.split("-")[1];
+        if (!datacenter) {
+            logger.error(`Invalid Mailchimp API Key format: ${apiKey}`);
+            return;
+        }
         const emailHash = crypto.createHash("md5").update(newData.email.toLowerCase()).digest("hex");
         const url = `https://${datacenter}.api.mailchimp.com/3.0/lists/${listId}/members/${emailHash}`;
 
@@ -382,7 +386,7 @@ exports.syncSubscriberToMailchimp = onDocumentWritten({
 
         await axios.put(url, payload, {
             headers: {
-                Authorization: `Bearer ${apiKey}`
+                Authorization: `apikey ${apiKey}`
             }
         });
 
@@ -391,5 +395,88 @@ exports.syncSubscriberToMailchimp = onDocumentWritten({
         // Log detailed error from Mailchimp but don't crash the function
         const errorData = error.response ? error.response.data : error.message;
         logger.error(`Mailchimp sync error for ${newData.email}:`, errorData);
+    }
+});
+
+/**
+ * Temporary Migration function to fix article formatting
+ */
+exports.migrateArticleFormatting = onRequest({ timeoutSeconds: 540, memory: "1Gi" }, async (req, res) => {
+    // Ported cleanContent logic
+    function cleanContent(content) {
+        if (!content) return "";
+        let cleaned = content
+            .replace(/rnrnrn/g, '\n\n')
+            .replace(/rnrn/g, '\n\n')
+            .replace(/rn/g, '\n')
+            .replace(/\\r\\n|\\n|\r\n/g, '\n')
+            .replace(/\\_/g, ' ')
+            .replace(/([a-z])\n([a-z])/g, '$1 $2')
+            .replace(/([.!?])\n([A-ZÁÉÍÓÚ])/g, '$1\n\n$2');
+
+        cleaned = cleaned.replace(/n<(p|h|ul|ol|div|blockquote|section|figure|img)/gi, '\n<$1');
+        cleaned = cleaned.replace(/\\u([0-9a-fA-F]{4})/g, (match, grp) => {
+            return String.fromCharCode(parseInt(grp, 16));
+        });
+
+        const hasParagraphs = /<p[\s\S]*?>/i.test(cleaned);
+        if (!hasParagraphs) {
+            const blockElements = /^\s*<(h[1-6]|figure|blockquote|ul|ol|li|div|section|article|img|iframe|table|hr)/i;
+            const paragraphs = cleaned.split(/\n{2,}/).filter(p => p.trim().length > 0);
+            if (paragraphs.length > 0) {
+                return paragraphs
+                    .map(p => {
+                        const trimmed = p.trim();
+                        if (blockElements.test(trimmed)) return trimmed;
+                        return `<p class="mb-8 last:mb-0 leading-relaxed">${trimmed}</p>`;
+                    })
+                    .join('');
+            }
+        }
+        cleaned = cleaned.replace(/<p>\s*<\/p>/g, '').trim();
+        return cleaned;
+    }
+
+    try {
+        const articlesRef = db.collection("articles");
+        let processedCount = 0;
+        let updatedCount = 0;
+        let lastDoc = null;
+        const PAGE_SIZE = 500;
+
+        while (true) {
+            let query = articlesRef.orderBy("__name__").limit(PAGE_SIZE);
+            if (lastDoc) query = query.startAfter(lastDoc);
+
+            const snapshot = await query.get();
+            if (snapshot.empty) break;
+
+            const batch = db.batch();
+            let batchCount = 0;
+
+            snapshot.docs.forEach(doc => {
+                const data = doc.data();
+                const originalContent = data.content || "";
+                const cleaned = cleanContent(originalContent);
+
+                if (cleaned !== originalContent) {
+                    batch.update(doc.ref, { content: cleaned });
+                    batchCount++;
+                    updatedCount++;
+                }
+                processedCount++;
+                lastDoc = doc;
+            });
+
+            if (batchCount > 0) await batch.commit();
+
+            logger.info(`Migration Progress: ${processedCount} processed, ${updatedCount} updated.`);
+            if (snapshot.docs.length < PAGE_SIZE) break;
+        }
+
+        res.status(200).send(`Migration complete. Processed ${processedCount}, Updated ${updatedCount}.`);
+    } catch (error) {
+        logger.error("Migration error", error);
+        res.status(500).send(error.toString());
     }
 });

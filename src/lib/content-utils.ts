@@ -62,46 +62,35 @@ export function truncateToSentence(text: string, maxLength: number): string {
 export function cleanContent(content: string): string {
     if (!content) return "";
 
-    // Handle literal "rnrn" and "rn" strings which are common migration artifacts
+    // 1. Initial cleanup of literal tokens
     let cleaned = content
         .replace(/rnrnrn/g, '\n\n')
         .replace(/rnrn/g, '\n\n')
-        // Artifacts like "rn<" or "rn " are easy.
-        .replace(/rn</g, '\n<')
-        .replace(/rn\s/g, '\n ')
-        // Artifacts like "period.rnSentence" (most common reason for huge blocks)
-        .replace(/([.!?])rn([A-ZÁÉÍÓÚ])/g, '$1\n\n$2')
-        .replace(/([.!?])rn\s*([A-ZÁÉÍÓÚ])/g, '$1\n\n$2')
-        .replace(/rn([A-ZÁÉÍÓÚ])/g, '\n\n$1') // More aggressive: rn followed by capital
-        // Standard escapes
-        .replace(/\\r\\n/g, '\n')
-        .replace(/\r\n/g, '\n')
-        .replace(/\\n/g, '\n')
-        .replace(/\\_/g, ' ');
+        .replace(/rn/g, '\n')
+        .replace(/\\r\\n|\\n|\r\n/g, '\n')
+        .replace(/\\_/g, ' ')
+        // Fix words stuck together by newline artifacts
+        // If a newline is between a lowercase letter and another lowercase letter, it's likely a mistake.
+        .replace(/([a-z])\n([a-z])/g, '$1 $2')
+        // But if it's after a period and before a capital, it's a paragraph.
+        .replace(/([.!?])\n([A-ZÁÉÍÓÚ])/g, '$1\n\n$2');
 
-    // 2. Handle the "n<p" etc artifacts - these usually indicate a newline was meant
-    cleaned = cleaned.replace(/n<(p|h|ul|ol|div|blockquote|section)/gi, '\n<$1');
+    // 2. Standardize some common artifacts
+    cleaned = cleaned.replace(/n<(p|h|ul|ol|div|blockquote|section|figure|img)/gi, '\n<$1');
 
-    // 3. Handle specific formatting artifacts
-    // Sometimes words are stuck together with "n" (e.g. "palabranpalabra")
-    // but we only want to fix it if it's very likely a newline artifact
-    // (e.g., between punctuation and a capital letter, which usually doesn't happen in Spanish)
-    // Actually, it's safer to stick to obvious artifacts for now to avoid breaking words.
-
-    // 4. Handle unicode
+    // 3. Handle Unicode
     cleaned = cleaned.replace(/\\u([0-9a-fA-F]{4})/g, (match, grp) => {
         return String.fromCharCode(parseInt(grp, 16));
     });
 
-    // 5. Recover paragraph structure
+    // 4. Recover paragraph structure
     // If it has NO <p> tags at all, we MUST wrap it.
     const hasParagraphs = /<p[\s\S]*?>/i.test(cleaned);
-    const hasTags = /<[a-z][\s\S]*?>/i.test(cleaned);
 
     if (!hasParagraphs) {
-        // It might have other tags, but no paragraphs. 
-        // We'll split by newlines to create paragraphs.
-        // We use {1,} here for splitting to be more aggressive in finding breaks if there are no <p> tags.
+        // Blocks that should NOT be wrapped in <p>
+        const blockElements = /^\s*<(h[1-6]|figure|blockquote|ul|ol|li|div|section|article|img|iframe|table|hr)/i;
+
         const paragraphs = cleaned
             .split(/\n{2,}/)
             .filter(p => p.trim().length > 0);
@@ -110,15 +99,16 @@ export function cleanContent(content: string): string {
             return paragraphs
                 .map(p => {
                     const trimmed = p.trim();
-                    if (trimmed.startsWith('<') && trimmed.endsWith('>')) return trimmed; // Skip if looks like a tag block
+                    // If it matches a block element at the start, don't wrap in <p>
+                    if (blockElements.test(trimmed)) return trimmed;
+                    // Otherwise wrap in <p>
                     return `<p class="mb-8 last:mb-0 leading-relaxed">${trimmed}</p>`;
                 })
                 .join('');
         }
     }
 
-    // If it has tags, we want to maintain them. 
-    // BUT we still want to clean up excessive newlines that might cause gaps.
+    // 5. Cleanup excessive white space
     cleaned = cleaned
         .replace(/<p>\s*<\/p>/g, '')
         .trim();
