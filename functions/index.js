@@ -257,57 +257,115 @@ exports.sendMagicLink = onCall({
     secrets: ["RESEND_API_KEY"],
     maxInstances: 10
 }, async (request) => {
-    const { email, url } = request.data;
+    const { email, url, isInvitation } = request.data;
+
+    logger.info("sendMagicLink invoked", { email, url, isInvitation });
 
     if (!email) {
+        logger.error("Email missing in sendMagicLink request");
         throw new Error("El email es obligatorio");
     }
 
     try {
-        const actionCodeSettings = {
-            url: url || "https://technologyreview.es/subscribe",
-            handleCodeInApp: true,
-        };
+        const isGmail = email.toLowerCase().endsWith("@gmail.com");
+        const targetUrl = url || "https://technologyreview.es/subscribe";
 
-        const link = await admin.auth().generateSignInWithEmailLink(email, actionCodeSettings);
+        let subject = "Tu enlace de acceso a MIT Technology Review";
+        let htmlContent = "";
+        let magicLink = "";
+
+        if (isInvitation && isGmail) {
+            // Special treatment for Gmail invitations: guide them to Google Login
+            subject = "Bienvenido al CMS de MIT Technology Review";
+            htmlContent = `
+                <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px; color: #1a1a1a; background-color: #ffffff; border-top: 8px solid #000000;">
+                    <h1 style="font-size: 28px; font-weight: 900; font-style: italic; letter-spacing: -0.05em; margin-bottom: 24px; text-transform: uppercase;">MIT Technology Review</h1>
+                    <p style="font-size: 16px; line-height: 1.6; margin-bottom: 32px; color: #4b5563;">
+                        Has sido autorizado para acceder al CMS de MIT Technology Review en español. 
+                        Dado que usas una cuenta de Gmail, puedes iniciar sesión de forma rápida y segura usando el botón <strong>"ENTRAR CON GOOGLE"</strong>.
+                    </p>
+                    <a href="${targetUrl}" style="display: inline-block; background-color: #000000; color: #ffffff; padding: 16px 32px; font-size: 14px; font-weight: 900; text-decoration: none; text-transform: uppercase; letter-spacing: 0.1em; transition: background-color 0.2s ease;">
+                        Ir al CMS
+                    </a>
+                    <div style="margin-top: 48px; padding-top: 24px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #9ca3af; text-align: center;">
+                        <p>&copy; ${new Date().getFullYear()} MIT Technology Review en español</p>
+                    </div>
+                </div>
+            `;
+            logger.info("Sending Google Login invitation (Gmail)", { email });
+        } else {
+            // Standard Magic Link (either Login or non-Gmail invitation)
+            const actionCodeSettings = {
+                url: targetUrl,
+                handleCodeInApp: true,
+            };
+
+            magicLink = await admin.auth().generateSignInWithEmailLink(email, actionCodeSettings);
+
+            if (isInvitation) {
+                subject = "Invitación al CMS de MIT Technology Review";
+                htmlContent = `
+                    <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px; color: #1a1a1a; background-color: #ffffff; border-top: 8px solid #000000;">
+                        <h1 style="font-size: 28px; font-weight: 900; font-style: italic; letter-spacing: -0.05em; margin-bottom: 24px; text-transform: uppercase;">MIT Technology Review</h1>
+                        <p style="font-size: 16px; line-height: 1.6; margin-bottom: 32px; color: #4b5563;">
+                            Has sido invitado a colaborar en MIT Technology Review en español. 
+                            Haz clic en el botón de abajo para activar tu acceso e iniciar sesión.
+                        </p>
+                        <a href="${magicLink}" style="display: inline-block; background-color: #000000; color: #ffffff; padding: 16px 32px; font-size: 14px; font-weight: 900; text-decoration: none; text-transform: uppercase; letter-spacing: 0.1em; transition: background-color 0.2s ease;">
+                            Activar Acceso
+                        </a>
+                        <div style="margin-top: 48px; padding-top: 24px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #9ca3af; text-align: center;">
+                            <p>&copy; ${new Date().getFullYear()} MIT Technology Review en español</p>
+                        </div>
+                    </div>
+                `;
+            } else {
+                htmlContent = `
+                    <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px; color: #1a1a1a; background-color: #ffffff; border-top: 8px solid #000000;">
+                        <h1 style="font-size: 28px; font-weight: 900; font-style: italic; letter-spacing: -0.05em; margin-bottom: 24px; text-transform: uppercase;">MIT Technology Review</h1>
+                        <p style="font-size: 16px; line-height: 1.6; margin-bottom: 32px; color: #4b5563;">
+                            Has solicitado un enlace de acceso para entrar en tu cuenta de MIT Technology Review en español. 
+                            Haz clic en el botón de abajo para iniciar sesión de forma segura.
+                        </p>
+                        <a href="${magicLink}" style="display: inline-block; background-color: #000000; color: #ffffff; padding: 16px 32px; font-size: 14px; font-weight: 900; text-decoration: none; text-transform: uppercase; letter-spacing: 0.1em; transition: background-color 0.2s ease;">
+                            Iniciar Sesión
+                        </a>
+                        <div style="margin-top: 48px; padding-top: 24px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #9ca3af; text-align: center;">
+                            <p>&copy; ${new Date().getFullYear()} MIT Technology Review en español</p>
+                        </div>
+                    </div>
+                `;
+            }
+            logger.info("Generated magic link", { email, isInvitation });
+        }
 
         const { Resend } = require("resend");
         const resendApiKey = process.env.RESEND_API_KEY;
 
         if (!resendApiKey) {
+            logger.error("RESEND_API_KEY environment variable is not set");
             throw new Error("RESEND_API_KEY no configurada");
         }
 
         const resend = new Resend(resendApiKey);
 
-        await resend.emails.send({
+        const { data, error: resendError } = await resend.emails.send({
             from: "MIT Technology Review <onboarding@resend.dev>", // TODO: Update to verified domain
             to: email,
-            subject: "Tu enlace de acceso a MIT Technology Review",
-            html: `
-                <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px; color: #1a1a1a; background-color: #ffffff; border-top: 8px solid #000000;">
-                    <h1 style="font-size: 28px; font-weight: 900; font-style: italic; letter-spacing: -0.05em; margin-bottom: 24px; text-transform: uppercase;">MIT Technology Review</h1>
-                    <p style="font-size: 16px; line-height: 1.6; margin-bottom: 32px; color: #4b5563;">
-                        Has solicitado un enlace de acceso para entrar en tu cuenta de MIT Technology Review en español. 
-                        Haz clic en el botón de abajo para iniciar sesión de forma segura.
-                    </p>
-                    <a href="${link}" style="display: inline-block; background-color: #000000; color: #ffffff; padding: 16px 32px; font-size: 14px; font-weight: 900; text-decoration: none; text-transform: uppercase; letter-spacing: 0.1em; transition: background-color 0.2s ease;">
-                        Iniciar Sesión
-                    </a>
-                    <p style="font-size: 14px; line-height: 1.6; margin-top: 32px; color: #9ca3af;">
-                        Este enlace caducará en breve. Si no has solicitado este acceso, puedes ignorar este email de forma segura.
-                    </p>
-                    <div style="margin-top: 48px; padding-top: 24px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #9ca3af; text-align: center;">
-                        <p>&copy; ${new Date().getFullYear()} MIT Technology Review en español</p>
-                    </div>
-                </div>
-            `
+            subject: subject,
+            html: htmlContent
         });
 
-        return { success: true };
+        if (resendError) {
+            logger.error("Resend API error", { error: resendError, email });
+            throw new Error(`Error de Resend: ${resendError.message}`);
+        }
+
+        logger.info("Magic link email sent successfully", { id: data.id, email });
+        return { success: true, id: data.id };
     } catch (error) {
-        logger.error("Error enviando Magic Link:", error);
-        throw new Error("No se pudo enviar el email de acceso");
+        logger.error("Error in sendMagicLink function:", error);
+        throw new Error(error.message || "No se pudo enviar el email de acceso");
     }
 });
 

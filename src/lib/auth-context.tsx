@@ -11,9 +11,9 @@ import {
     isSignInWithEmailLink,
     signInWithEmailLink,
 } from 'firebase/auth'
-import { auth, db } from './firebase'
+import { auth, db, functions } from './firebase'
 import { collection, query, where, getDocs, doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
-import { getFunctions, httpsCallable } from 'firebase/functions'
+import { httpsCallable } from 'firebase/functions'
 
 // Fallback super admin
 export const SUPER_ADMINS = ['pedro.moneo@gmail.com']
@@ -67,12 +67,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     setIsAdmin(true)
                 } else {
                     try {
-                        const q = query(
-                            collection(db, 'authorized_users'),
-                            where('email', '==', normalizedEmail)
-                        )
-                        const snapshot = await getDocs(q)
-                        setIsAdmin(!snapshot.empty)
+                        // Optimization: Direct doc lookup by email ID
+                        const adminDoc = await getDoc(doc(db, 'authorized_users', normalizedEmail));
+                        setIsAdmin(adminDoc.exists());
                     } catch (error) {
                         console.error('Error checking admin status:', error)
                         setIsAdmin(false)
@@ -122,7 +119,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const loginWithOTP = async (email: string) => {
-        const functions = getFunctions();
         const sendMagicLink = httpsCallable(functions, 'sendMagicLink');
 
         await sendMagicLink({

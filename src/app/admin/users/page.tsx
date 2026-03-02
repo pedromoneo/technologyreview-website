@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { db } from "@/lib/firebase";
+import { db, functions } from "@/lib/firebase";
 import { SUPER_ADMINS } from "@/lib/auth-context";
 import { collection, query, getDocs, setDoc, deleteDoc, doc, serverTimestamp } from "firebase/firestore";
+import { httpsCallable } from "firebase/functions";
 import { User, ShieldCheck, Mail, Plus, Trash2, Search, Loader2, X } from "lucide-react";
 
 export default function UsersPage() {
@@ -56,12 +57,29 @@ export default function UsersPage() {
         setAdding(true);
         try {
             const email = newEmail.toLowerCase().trim();
+
+            // 1. Add to authorized users collection
             await setDoc(doc(db, "authorized_users", email), {
                 email: email,
                 role: "Editor",
                 status: "Activo",
                 addedAt: serverTimestamp()
             });
+
+            // 2. Trigger invitation email via Magic Link (or Google Login instructions for Gmail)
+            try {
+                const sendMagicLink = httpsCallable(functions, 'sendMagicLink');
+                await sendMagicLink({
+                    email: email,
+                    url: window.location.origin + '/admin',
+                    isInvitation: true
+                });
+                alert("Usuario añadido y notificación enviada con éxito.");
+            } catch (emailError: any) {
+                console.error("Error sending invitation email:", emailError);
+                alert(`Usuario añadido pero hubo un error al enviar el email: ${emailError.message}`);
+            }
+
             setNewEmail("");
             setShowAddModal(false);
             fetchUsers();
