@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
 import { SUPER_ADMINS } from "@/lib/auth-context";
-import { collection, query, getDocs, addDoc, deleteDoc, doc, serverTimestamp } from "firebase/firestore";
+import { collection, query, getDocs, setDoc, deleteDoc, doc, serverTimestamp } from "firebase/firestore";
 import { User, ShieldCheck, Mail, Plus, Trash2, Search, Loader2, X } from "lucide-react";
 
 export default function UsersPage() {
@@ -55,8 +55,9 @@ export default function UsersPage() {
 
         setAdding(true);
         try {
-            await addDoc(collection(db, "authorized_users"), {
-                email: newEmail.toLowerCase().trim(),
+            const email = newEmail.toLowerCase().trim();
+            await setDoc(doc(db, "authorized_users", email), {
+                email: email,
                 role: "Editor",
                 status: "Activo",
                 addedAt: serverTimestamp()
