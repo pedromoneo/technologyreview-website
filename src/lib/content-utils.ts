@@ -37,15 +37,42 @@ export function cleanExcerpt(excerpt: string): string {
     return cleaned.trim();
 }
 
+/**
+ * Truncate a string to a maximum length without cutting in the middle of a sentence if possible.
+ */
+export function truncateToSentence(text: string, maxLength: number): string {
+    if (!text || text.length <= maxLength) return text;
+
+    // We want to find the last '.', '!', or '?' before maxLength
+    const sub = text.substring(0, maxLength);
+    const lastSentenceEnd = Math.max(
+        sub.lastIndexOf(". "),
+        sub.lastIndexOf("! "),
+        sub.lastIndexOf("? ")
+    );
+
+    if (lastSentenceEnd > maxLength * 0.4) { // Only truncate if we have a reasonable amount left
+        return text.substring(0, lastSentenceEnd + 1);
+    }
+
+    // Fallback: just cut at maxLength and add ...
+    return text.substring(0, maxLength).trim() + "...";
+}
+
 export function cleanContent(content: string): string {
     if (!content) return "";
 
-    // 1. Normalize line endings and handle artifacts
+    // Handle literal "rnrn" and "rn" strings which are common migration artifacts
     let cleaned = content
-        // Handle literal "rnrn" and "rn" strings which are common migration artifacts
         .replace(/rnrnrn/g, '\n\n')
         .replace(/rnrn/g, '\n\n')
-        .replace(/rn/g, '\n')
+        // Artifacts like "rn<" or "rn " are easy.
+        .replace(/rn</g, '\n<')
+        .replace(/rn\s/g, '\n ')
+        // Artifacts like "period.rnSentence" (most common reason for huge blocks)
+        .replace(/([.!?])rn([A-ZÁÉÍÓÚ])/g, '$1\n\n$2')
+        .replace(/([.!?])rn\s*([A-ZÁÉÍÓÚ])/g, '$1\n\n$2')
+        .replace(/rn([A-ZÁÉÍÓÚ])/g, '\n\n$1') // More aggressive: rn followed by capital
         // Standard escapes
         .replace(/\\r\\n/g, '\n')
         .replace(/\r\n/g, '\n')

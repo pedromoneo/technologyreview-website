@@ -1,4 +1,4 @@
-
+import 'dotenv/config';
 import * as admin from 'firebase-admin';
 import { db } from '../src/lib/firebase-admin';
 
@@ -19,37 +19,48 @@ async function cleanupDatabase() {
         let content = data.content || '';
         let excerpt = data.excerpt || '';
 
-        // Check for artifacts in content
-        if (content.includes('rnrn') || content.includes('rn<') || content.includes('\\n')) {
-            // We don't want to replace "rn" everywhere as it might be part of words,
-            // but "rnrn" and "rn<" are definitely artifacts.
-            // However, for the purpose of a one-time cleanup, we'll be thorough.
+        // Improved Content Cleanup (handles artifacts that cause huge paragraphs)
+        const newContent = content
+            .replace(/rnrnrn/g, '\n\n')
+            .replace(/rnrn/g, '\n\n')
+            .replace(/rn</g, '\n<')
+            .replace(/rn\s/g, '\n ')
+            .replace(/([.!?])rn([A-ZÁÉÍÓÚ])/g, '$1\n\n$2')
+            .replace(/([.!?])rn\s*([A-ZÁÉÍÓÚ])/g, '$1\n\n$2')
+            .replace(/rn([A-ZÁÉÍÓÚ])/g, '\n\n$1')
+            .replace(/\\r\\n/g, '\n')
+            .replace(/\\n/g, '\n');
 
-            const newContent = content
-                .replace(/rnrnrn/g, '\n\n')
-                .replace(/rnrn/g, '\n\n')
-                .replace(/\\r\\n/g, '\n')
-                .replace(/\\n/g, '\n')
-                .replace(/rn</g, '\n<');
+        if (newContent !== content) {
+            content = newContent;
+            changed = true;
+        }
 
-            if (newContent !== content) {
-                content = newContent;
-                changed = true;
+        // Improved Excerpt Cleanup & Truncation
+        let cleanedExcerpt = (excerpt || '')
+            .replace(/<[^>]*>?/gm, "")
+            .replace(/rnrnrn|rnrn|rn|\\r\\n|\\n/g, " ")
+            .replace(/\s+/g, " ")
+            .trim();
+
+        // Truncation logic for enormous excerpts
+        if (cleanedExcerpt.length > 350) {
+            const truncated = cleanedExcerpt.substring(0, 350);
+            const lastSentenceEnd = Math.max(
+                truncated.lastIndexOf(". "),
+                truncated.lastIndexOf("! "),
+                truncated.lastIndexOf("? ")
+            );
+            if (lastSentenceEnd > 150) {
+                cleanedExcerpt = cleanedExcerpt.substring(0, lastSentenceEnd + 1);
+            } else {
+                cleanedExcerpt = truncated + "...";
             }
         }
 
-        // Check for artifacts in excerpt
-        if (excerpt.includes('rnrn') || excerpt.includes('rn')) {
-            const newExcerpt = excerpt
-                .replace(/rnrnrn/g, ' ')
-                .replace(/rnrn/g, ' ')
-                .replace(/rn/g, ' ')
-                .replace(/\\r\\n|\\n/g, ' ');
-
-            if (newExcerpt !== excerpt) {
-                excerpt = newExcerpt;
-                changed = true;
-            }
+        if (cleanedExcerpt !== excerpt) {
+            excerpt = cleanedExcerpt;
+            changed = true;
         }
 
         if (changed) {

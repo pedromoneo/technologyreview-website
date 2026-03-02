@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { Clock, User, Share2, Facebook, Twitter, Linkedin, ArrowLeft } from "lucide-react";
-import { cleanContent, cleanExcerpt } from "@/lib/content-utils";
+import { cleanContent, cleanExcerpt, truncateToSentence } from "@/lib/content-utils";
 import DOMPurify from "isomorphic-dompurify";
 
 export const revalidate = 3600; // 1 hour revalidation
@@ -125,28 +125,42 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
                         <div className="prose prose-xl prose-primary max-w-none">
                             {(() => {
                                 const cleaned = cleanContent(article.content);
-                                const plainExcerpt = cleanExcerpt(article.excerpt);
+                                const plainExcerpt = cleanExcerpt(article.content.startsWith('<p>') ? '' : (article.excerpt || ''));
+                                // Wait, if content has no <p>, then cleanExcerpt might be using excerpt.
+                                // Actually, use original cleanExcerpt but with my new truncation logic.
+                                const finalExcerpt = truncateToSentence(cleanExcerpt(article.excerpt), 350);
 
-                                let destacadoText = plainExcerpt;
+                                let destacadoText = finalExcerpt;
                                 let bodyContent = cleaned;
 
                                 // Detect first paragraph
                                 const firstPEnd = cleaned.indexOf('</p>');
-                                if (firstPEnd !== -1 && plainExcerpt.length > 20) {
+                                if (firstPEnd !== -1) {
                                     const firstP = cleaned.substring(0, firstPEnd + 4);
                                     const plainFirstP = firstP.replace(/<[^>]*>?/gm, '').replace(/\s+/g, ' ').trim();
 
                                     // if the first paragraph contains the excerpt (meaning the excerpt is a prefix),
-                                    // OR if the excerpt contains the first 100 chars of the first paragraph,
                                     // we have a duplication.
-                                    const matchLimit = Math.min(50, plainExcerpt.length);
-                                    if (plainFirstP.includes(plainExcerpt.substring(0, matchLimit))) {
-                                        // Use the full first paragraph as the destacado if it's more complete
-                                        if (plainFirstP.length >= plainExcerpt.length) {
+                                    const matchLimit = Math.min(60, destacadoText.length);
+                                    if (destacadoText && plainFirstP.includes(destacadoText.substring(0, matchLimit))) {
+                                        if (plainFirstP.length <= 480) {
+                                            // Small enough to be the full lead
                                             destacadoText = plainFirstP;
+                                            bodyContent = cleaned.substring(firstPEnd + 4);
+                                        } else {
+                                            // Too long for a lead font. Truncate and move remainder.
+                                            destacadoText = truncateToSentence(plainFirstP, 450);
+
+                                            // Find where destacadoText ends in plainFirstP
+                                            const cutoff = plainFirstP.indexOf(destacadoText.substring(destacadoText.length - 20));
+                                            const remainder = cutoff !== -1 ? plainFirstP.substring(cutoff + 20).trim() : '';
+
+                                            if (remainder.length > 50) {
+                                                bodyContent = `<p class="mb-8">${remainder}</p>` + cleaned.substring(firstPEnd + 4);
+                                            } else {
+                                                bodyContent = cleaned.substring(firstPEnd + 4);
+                                            }
                                         }
-                                        // Remove it from the body
-                                        bodyContent = cleaned.substring(firstPEnd + 4);
                                     }
                                 }
 

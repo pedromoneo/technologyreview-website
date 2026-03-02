@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Article } from "@/data/mock-articles";
-import { cleanExcerpt } from "@/lib/content-utils";
+import { cleanExcerpt, truncateToSentence } from "@/lib/content-utils";
 
 interface ArticleCardProps {
     article: Article;
@@ -9,6 +9,8 @@ interface ArticleCardProps {
 }
 
 export default function ArticleCard({ article, featured = false }: ArticleCardProps) {
+    const cleanedExcerpt = cleanExcerpt(article.excerpt);
+
     if (featured) {
         return (
             <Link href={`/articulos/${article.id}`} className="group relative overflow-hidden bg-primary text-white flex flex-col md:flex-row min-h-[500px] hover:bg-black transition-colors">
@@ -31,7 +33,7 @@ export default function ArticleCard({ article, featured = false }: ArticleCardPr
                         {article.title}
                     </h2>
                     <p className="text-gray-300 text-lg mb-10 leading-relaxed max-w-xl">
-                        {cleanExcerpt(article.excerpt)}
+                        {truncateToSentence(cleanedExcerpt, 350)}
                     </p>
                     <div className="flex items-center space-x-6 text-[11px] font-black uppercase tracking-widest text-accent">
                         <span>{article.author}</span>
@@ -64,7 +66,7 @@ export default function ArticleCard({ article, featured = false }: ArticleCardPr
             </h3>
 
             <p className="text-sm text-gray-500 leading-relaxed mb-6 line-clamp-3">
-                {cleanExcerpt(article.excerpt)}
+                {truncateToSentence(cleanedExcerpt, 200)}
             </p>
 
             <div className="flex items-center space-x-3 text-[10px] font-black uppercase tracking-widest text-gray-400">
