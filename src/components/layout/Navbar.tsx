@@ -6,7 +6,7 @@ import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, collection, getDocs, query, where, limit } from "firebase/firestore";
 import { slugify } from "@/lib/content-utils";
 
 import { useAuth } from "@/lib/auth-context";
@@ -23,6 +23,8 @@ export default function Navbar() {
 
     const [topics, setTopics] = useState<string[]>([]);
     const [isTemasOpen, setIsTemasOpen] = useState(false);
+    const [featuredInformes, setFeaturedInformes] = useState<any[]>([]);
+    const [isInformesOpen, setIsInformesOpen] = useState(false);
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
@@ -54,6 +56,26 @@ export default function Navbar() {
             }
         };
         fetchCategories();
+
+        // Fetch featured informes
+        const fetchFeaturedInformes = async () => {
+            try {
+                const q = query(
+                    collection(db, "informes"),
+                    where("status", "==", "featured"),
+                    limit(2)
+                );
+                const snapshot = await getDocs(q);
+                const fetched = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                setFeaturedInformes(fetched);
+            } catch (error) {
+                console.error("Error fetching featured informes for navbar:", error);
+            }
+        };
+        fetchFeaturedInformes();
 
         return () => window.removeEventListener("scroll", handleScroll);
     }, []);
@@ -114,7 +136,37 @@ export default function Navbar() {
                                         </div>
                                     </div>
                                 </div>
-                                <Link href="/temas/informes" className="hover:text-primary transition-colors">Informes</Link>
+                                <div
+                                    className="relative group h-full flex items-center"
+                                    onMouseEnter={() => setIsInformesOpen(true)}
+                                    onMouseLeave={() => setIsInformesOpen(false)}
+                                >
+                                    <Link href="/informes" className="hover:text-primary transition-colors flex items-center py-2">
+                                        Informes
+                                        <ChevronDown className={`w-3 h-3 ml-2 transition-transform duration-300 ${isInformesOpen ? "rotate-180" : ""}`} />
+                                    </Link>
+
+                                    {/* Informes Dropdown Menu */}
+                                    <div className={`absolute top-full left-1/2 -translate-x-1/2 w-80 bg-white border border-gray-100 shadow-2xl rounded-2xl py-6 transition-all duration-300 ${isInformesOpen ? "opacity-100 visible translate-y-0" : "opacity-0 invisible -translate-y-4"}`}>
+                                        <div className="grid grid-cols-1 gap-1 px-4">
+                                            {featuredInformes.length > 0 ? (
+                                                featuredInformes.map(informe => (
+                                                    <Link
+                                                        key={informe.id}
+                                                        href={`/informes/${informe.slug}`}
+                                                        className="px-4 py-2.5 hover:bg-gray-50 rounded-xl transition-colors text-gray-400 hover:text-primary block font-black uppercase tracking-widest text-[10px]"
+                                                    >
+                                                        {informe.title}
+                                                    </Link>
+                                                ))
+                                            ) : (
+                                                <div className="px-4 py-2 text-[10px] font-bold text-gray-300 uppercase italic">
+                                                    Próximamente más informes
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
                                 <Link href="/temas/eventos" className="hover:text-primary transition-colors">Eventos</Link>
                             </div>
                         </div>
@@ -252,13 +304,27 @@ export default function Navbar() {
                             <div>
                                 <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-accent mb-6">Secciones</h3>
                                 <div className="space-y-4">
-                                    <Link
-                                        href="/temas/informes"
-                                        onClick={() => setIsMenuOpen(false)}
-                                        className="block text-sm font-black uppercase tracking-widest text-gray-400 hover:text-primary transition-colors"
-                                    >
-                                        Informes
-                                    </Link>
+                                    <div className="space-y-4">
+                                        <Link
+                                            href="/temas/informes"
+                                            onClick={() => setIsMenuOpen(false)}
+                                            className="block text-sm font-black uppercase tracking-widest text-primary mb-4"
+                                        >
+                                            Informes
+                                        </Link>
+                                        <div className="pl-4 space-y-3 border-l-2 border-gray-50">
+                                            {featuredInformes.map(informe => (
+                                                <Link
+                                                    key={informe.id}
+                                                    href={`/informes/${informe.slug}`}
+                                                    onClick={() => setIsMenuOpen(false)}
+                                                    className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-accent"
+                                                >
+                                                    {informe.title}
+                                                </Link>
+                                            ))}
+                                        </div>
+                                    </div>
                                     <Link
                                         href="/temas/eventos"
                                         onClick={() => setIsMenuOpen(false)}

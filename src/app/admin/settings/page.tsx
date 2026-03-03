@@ -98,7 +98,7 @@ export default function AdminSettingsPage() {
                     </div>
 
                     <p className="text-[11px] text-gray-400 font-medium max-w-xl">
-                        Define los temas disponibles para clasificar los artículos y estudios en el sistema.
+                        Define los temas disponibles para clasificar los artículos e informes en el sistema.
                     </p>
 
                     <div className="flex flex-wrap gap-2 py-2">

@@ -89,7 +89,7 @@ export default function ArticleCollection({ collectionId }: ArticleCollectionPro
     if (loading || !collection || articles.length === 0) return null;
 
     return (
-        <section className="bg-gray-50 py-16 md:py-24 overflow-hidden border-y border-gray-100">
+        <section className="bg-gray-50 py-16 md:py-24 overflow-hidden border-y border-gray-100 w-full max-w-full">
             <div className="container mx-auto px-4 md:px-6 mb-12">
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                     <div className="max-w-2xl">
@@ -131,7 +131,7 @@ export default function ArticleCollection({ collectionId }: ArticleCollectionPro
             <div
                 ref={scrollContainerRef}
                 onScroll={handleScroll}
-                className="flex gap-6 overflow-x-auto px-4 md:px-[calc((100vw-1280px)/2+1.5rem)] scrollbar-hide pb-8 snap-x snap-mandatory"
+                className="flex gap-6 overflow-x-auto px-4 md:px-6 scrollbar-hide pb-8 snap-x snap-mandatory"
                 style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
                 <style jsx>{`
@@ -183,7 +183,7 @@ export default function ArticleCollection({ collectionId }: ArticleCollectionPro
                     </Link>
                 ))}
 
-                <div className="flex-shrink-0 w-8 md:w-[calc((100vw-1280px)/2)]" aria-hidden="true" />
+                <div className="flex-shrink-0 w-8 md:w-24" aria-hidden="true" />
             </div>
         </section>
     );

@@ -31,7 +31,7 @@ export default function AdminSidebar({ isCollapsed, onToggle }: AdminSidebarProp
         { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
         { label: "Artículos", href: "/admin/posts", icon: FileText },
         { label: "Colecciones", href: "/admin/collections", icon: LayoutTemplate },
-        { label: "Estudios", href: "/admin/estudios", icon: BookOpen },
+        { label: "Informes", href: "/admin/informes", icon: BookOpen },
         { label: "Páginas", href: "/admin/pages", icon: Layers },
         { label: "Suscriptores", href: "/admin/subscribers", icon: Users },
     ];

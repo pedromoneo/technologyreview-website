@@ -83,6 +83,13 @@ export default async function Home() {
   const pos2Collections = allCollections.filter((c: any) => c.insertionPoint === 'pos2');
   const footerCollections = allCollections.filter((c: any) => c.insertionPoint === 'footer' || !c.insertionPoint);
 
+  // 5. Fetch Featured Informes for Sidebar
+  const featuredInformesSnap = await db.collection("informes")
+    .where("status", "==", "featured")
+    .limit(5)
+    .get();
+  const featuredInformes = featuredInformesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
   return (
     <div className="flex flex-col pt-28">
       {/* Hero Section - The Split Hero */}
@@ -113,6 +120,28 @@ export default async function Home() {
                 ))}
               </ul>
 
+              {/* Informes Section in Sidebar */}
+              {featuredInformes.length > 0 && (
+                <div className="mt-20">
+                  <div className="flex items-center space-x-4 mb-10">
+                    <div className="w-8 h-[3px] bg-accent" />
+                    <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-primary">
+                      Informes
+                    </h3>
+                  </div>
+                  <ul className="space-y-6">
+                    {featuredInformes.map((informe: any) => (
+                      <li key={informe.id}>
+                        <Link href={`/informes/${informe.slug}`} className="group flex items-center text-sm font-black text-gray-400 hover:text-primary transition-colors uppercase tracking-widest">
+                          <span className="w-0 group-hover:w-4 h-[1px] bg-primary mr-0 group-hover:mr-2 transition-all" />
+                          {informe.title}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
               <div className="mt-20 p-8 bg-muted border-t-4 border-primary">
                 <h4 className="text-xl font-black mb-4 leading-tight tracking-tighter">Acceso Ilimitado</h4>
                 <p className="text-sm text-gray-500 mb-6 font-medium">Suscríbete para leer todas nuestras historias sin límites.</p>
@@ -124,7 +153,7 @@ export default async function Home() {
           </aside>
 
           {/* Article grid */}
-          <div className="flex-1">
+          <div className="flex-1 min-w-0 max-w-full overflow-hidden">
             <div className="flex items-center space-x-6 mb-16">
               <span className="bg-accent text-primary px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em]">Últimas Historias</span>
               <div className="flex-1 h-[1px] bg-gray-100" />
@@ -139,7 +168,7 @@ export default async function Home() {
 
             {/* Insertion Point 1: After 4 articles */}
             {pos1Collections.length > 0 && (
-              <div className="my-24 -mx-6 lg:-mx-24 lg:w-[calc(100%+12rem)]">
+              <div className="my-24">
                 {pos1Collections.map(coll => (
                   <ArticleCollection key={coll.id} collectionId={coll.id} />
                 ))}
@@ -155,7 +184,7 @@ export default async function Home() {
 
             {/* Insertion Point 2: After 12 articles */}
             {pos2Collections.length > 0 && (
-              <div className="my-24 -mx-6 lg:-mx-24 lg:w-[calc(100%+12rem)]">
+              <div className="my-24">
                 {pos2Collections.map(coll => (
                   <ArticleCollection key={coll.id} collectionId={coll.id} />
                 ))}
