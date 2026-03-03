@@ -209,6 +209,7 @@ async function processEntry(entry, logId, internalLogId) {
         tags: tags || [],
         author: (entry.byline && entry.byline.length > 0) ? (entry.byline[0].text || "MIT Technology Review") : "MIT Technology Review",
         date: entry.published ? new Date(entry.published).toLocaleDateString("es-ES", { day: '2-digit', month: 'long', year: 'numeric' }) : new Date().toLocaleDateString("es-ES", { day: '2-digit', month: 'long', year: 'numeric' }),
+        publishedAt: entry.published ? admin.firestore.Timestamp.fromDate(new Date(entry.published)) : admin.firestore.FieldValue.serverTimestamp(),
         imageUrl: imageUrl || null,
         readingTime: `${entry.word_count ? Math.ceil(entry.word_count / 200) : 5} min`,
         status: "published",

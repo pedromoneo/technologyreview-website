@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { db } from "@/lib/firebase-admin";
 import { slugify } from "@/lib/content-utils";
+import LoadMoreStories from "@/components/home/LoadMoreStories";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 600; // 10 minutes cache
@@ -28,8 +29,8 @@ export default async function Home() {
   // 2. Fetch latest posts (fetch more to allow for splitting)
   const latestSnap = await db.collection("articles")
     .where("status", "in", ["published", "featured"])
-    .orderBy("date", "desc")
-    .limit(20)
+    .orderBy("publishedAt", "desc")
+    .limit(21)
     .get();
 
   const allFetched = latestSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -56,6 +57,14 @@ export default async function Home() {
   const filteredLatest = allFetched.filter(a => a.id !== featuredArticle?.id);
 
   const latestArticles = filteredLatest.map(mapArticle);
+
+  // Get the last article's timestamp for pagination
+  const lastDoc = latestSnap.docs[latestSnap.docs.length - 1];
+  const lastDocData = lastDoc ? lastDoc.data() : null;
+  const lastPublishedAt = lastDocData?.publishedAt ? {
+    seconds: lastDocData.publishedAt.seconds,
+    nanoseconds: lastDocData.publishedAt.nanoseconds
+  } : null;
 
   // Split articles for insertion points
   const first4 = latestArticles.slice(0, 4);
@@ -162,11 +171,12 @@ export default async function Home() {
               </div>
             )}
 
-            <div className="mt-24 text-center">
-              <button className="border-2 border-primary text-primary px-12 py-4 font-black uppercase tracking-[0.2em] text-[11px] hover:bg-primary hover:text-white transition-all">
-                Cargar más historias
-              </button>
-            </div>
+            {lastPublishedAt && (
+              <LoadMoreStories
+                initialLastTimestamp={lastPublishedAt}
+                excludedIds={featuredArticle ? [featuredArticle.id] : []}
+              />
+            )}
           </div>
         </div>
       </section>

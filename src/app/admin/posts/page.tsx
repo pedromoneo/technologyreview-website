@@ -18,7 +18,7 @@ export default function AdminPostsPage() {
     async function fetchArticles() {
         try {
             setLoading(true);
-            const q = query(collection(db, "articles"), orderBy("date", "desc"), limit(200)); // Sort by date
+            const q = query(collection(db, "articles"), orderBy("publishedAt", "desc"), limit(200)); // Sort by date
             const snapshot = await getDocs(q);
             const fetchedArticles = snapshot.docs.map(doc => ({
                 id: doc.id,

@@ -31,7 +31,8 @@ export default async function TopicPage({ params, searchParams }: TopicPageProps
     }
 
     const snapshot = await db.collection("articles")
-        .orderBy("date", "desc")
+        .where("status", "in", ["published", "featured"])
+        .orderBy("publishedAt", "desc")
         .limit(500)
         .get();
 
