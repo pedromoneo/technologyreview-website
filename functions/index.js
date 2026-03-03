@@ -13,8 +13,8 @@ const db = admin.firestore();
 
 // Initialize Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-// Explicitly using gemini-2.0-flash as it is the stable latest version
-const MODEL_NAME = "gemini-2.0-flash";
+// Explicitly using gemini-2.5-flash as the latest standard version
+const MODEL_NAME = "gemini-2.5-flash";
 
 let model;
 try {
