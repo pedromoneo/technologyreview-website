@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Clock, User, Share2, Facebook, Twitter, Linkedin, ArrowLeft } from "lucide-react";
 import { cleanContent, cleanExcerpt, truncateToSentence } from "@/lib/content-utils";
 import DOMPurify from "isomorphic-dompurify";
+import ViewTracker from "@/components/ViewTracker";
 
 export const revalidate = 3600; // 1 hour revalidation
 
@@ -63,6 +64,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
 
         return (
             <article className="pt-28 bg-white min-h-screen">
+                <ViewTracker collectionName="articles" documentId={article.id} />
                 {/* Minimal Header Nav */}
                 <div className="border-b bg-gray-50/50">
                     <div className="container mx-auto px-6 py-4 flex items-center">

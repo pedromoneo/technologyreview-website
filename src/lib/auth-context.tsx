@@ -63,17 +63,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 const normalizedEmail = authUser.email.toLowerCase();
 
                 // 1. Check Admin Status (CMS)
-                if (SUPER_ADMINS.includes(normalizedEmail)) {
-                    setIsAdmin(true)
-                } else {
-                    try {
-                        // Optimization: Direct doc lookup by email ID
-                        const adminDoc = await getDoc(doc(db, 'authorized_users', normalizedEmail));
-                        setIsAdmin(adminDoc.exists());
-                    } catch (error) {
-                        console.error('Error checking admin status:', error)
-                        setIsAdmin(false)
+                try {
+                    let userIsAdmin = false;
+                    const adminDocRef = doc(db, 'authorized_users', normalizedEmail);
+
+                    if (SUPER_ADMINS.includes(normalizedEmail)) {
+                        userIsAdmin = true;
+                        await setDoc(adminDocRef, {
+                            email: normalizedEmail,
+                            role: "Super Admin",
+                            lastLoginAt: serverTimestamp()
+                        }, { merge: true });
+                    } else {
+                        const adminDoc = await getDoc(adminDocRef);
+                        if (adminDoc.exists()) {
+                            userIsAdmin = true;
+                            await setDoc(adminDocRef, {
+                                lastLoginAt: serverTimestamp()
+                            }, { merge: true });
+                        }
                     }
+                    setIsAdmin(userIsAdmin);
+                } catch (error) {
+                    console.error('Error checking admin status:', error);
+                    setIsAdmin(false);
                 }
 
                 // 2. Check & Sync Subscriber Status (Magazine)

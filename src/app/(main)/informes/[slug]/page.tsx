@@ -2,6 +2,7 @@ import { db } from "@/lib/firebase-admin";
 import ArticleCard from "@/components/home/ArticleCard";
 import { notFound } from "next/navigation";
 import Image from "next/image";
+import ViewTracker from "@/components/ViewTracker";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 3600; // 1 hour cache for informe pages
@@ -63,6 +64,7 @@ export default async function InformePage({ params }: InformePageProps) {
 
     return (
         <main className="min-h-screen bg-white">
+            <ViewTracker collectionName="informes" documentId={informeSnapshot.docs[0].id} />
             {/* Hero Section */}
             <div className="relative h-[60vh] min-h-[400px] w-full overflow-hidden bg-primary">
                 <Image

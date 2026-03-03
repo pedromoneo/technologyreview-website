@@ -175,6 +175,7 @@ export default function UsersPage() {
                                 <tr>
                                     <th className="px-6 py-3 text-[9px] font-black uppercase text-gray-400 tracking-widest">Usuario</th>
                                     <th className="px-6 py-3 text-[9px] font-black uppercase text-gray-400 tracking-widest">Rol</th>
+                                    <th className="px-6 py-3 text-[9px] font-black uppercase text-gray-400 tracking-widest">Último Acceso</th>
                                     <th className="px-6 py-3 text-[9px] font-black uppercase text-gray-400 tracking-widest text-right">Acciones</th>
                                 </tr>
                             </thead>
@@ -204,6 +205,11 @@ export default function UsersPage() {
                                                     {SUPER_ADMINS.includes(u.email) ? "Super Admin" : (u.role || "Editor")}
                                                 </span>
                                             </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <span className="text-[9px] font-bold text-gray-400 tracking-widest uppercase">
+                                                {u.lastLoginAt ? (u.lastLoginAt?.toDate ? u.lastLoginAt.toDate() : new Date(u.lastLoginAt)).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'NUNCA'}
+                                            </span>
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             {!SUPER_ADMINS.includes(u.email) && (

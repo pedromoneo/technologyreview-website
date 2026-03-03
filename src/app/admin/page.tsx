@@ -3,7 +3,7 @@
 import { useAuth } from "@/lib/auth-context";
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
-import { collection, getDocs, query, orderBy, limit, getCountFromServer, Timestamp } from "firebase/firestore";
+import { collection, getDocs, query, orderBy, limit, getCountFromServer, Timestamp, getAggregateFromServer, sum } from "firebase/firestore";
 import {
     Plus,
     TrendingUp,
@@ -24,6 +24,7 @@ export default function AdminDashboard() {
     const [articles, setArticles] = useState<any[]>([]);
     const [totalArticles, setTotalArticles] = useState(0);
     const [totalSubscribers, setTotalSubscribers] = useState(0);
+    const [totalVisitas, setTotalVisitas] = useState(0);
     const [recentActivity, setRecentActivity] = useState<any[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
     const [loading, setLoading] = useState(true);
@@ -47,7 +48,14 @@ export default function AdminDashboard() {
                 setTotalArticles(articlesCountSnap.data().count);
 
                 const subscribersCountSnap = await getCountFromServer(collection(db, "subscribers"));
-                setTotalSubscribers(subscribersCountSnap.data().count);
+                const subsCount = subscribersCountSnap.data().count;
+                setTotalSubscribers(subsCount);
+
+                // Fetch total views
+                const articlesAggregate = await getAggregateFromServer(collection(db, "articles"), { totalViews: sum("views") });
+                const informesAggregate = await getAggregateFromServer(collection(db, "informes"), { totalViews: sum("views") });
+                const viewsSum = (articlesAggregate.data().totalViews || 0) + (informesAggregate.data().totalViews || 0);
+                setTotalVisitas(viewsSum);
 
                 // Fetch recent activity (recently updated articles/pages)
                 // We'll look for updatedAt or migratedAt
@@ -90,11 +98,13 @@ export default function AdminDashboard() {
         }
     };
 
+    const conversionRate = totalVisitas > 0 ? ((totalSubscribers / totalVisitas) * 100).toFixed(1) : "0.0";
+
     const stats = [
-        { label: "Visitas Totales", value: "128.4k", change: "+14%", trend: "up", icon: Eye },
-        { label: "Artículos", value: totalArticles.toLocaleString(), change: "+2", trend: "up", icon: FileText },
-        { label: "Suscriptores", value: totalSubscribers.toLocaleString(), change: "+5", trend: "up", icon: Users },
-        { label: "Conversión", value: "3.2%", change: "+0.4%", trend: "up", icon: TrendingUp },
+        { label: "Visitas Totales", value: totalVisitas.toLocaleString(), change: "-", trend: "up", icon: Eye },
+        { label: "Artículos", value: totalArticles.toLocaleString(), change: "-", trend: "up", icon: FileText },
+        { label: "Suscriptores", value: totalSubscribers.toLocaleString(), change: "-", trend: "up", icon: Users },
+        { label: "Conversión", value: `${conversionRate}%`, change: "-", trend: "up", icon: TrendingUp },
     ];
 
     return (
