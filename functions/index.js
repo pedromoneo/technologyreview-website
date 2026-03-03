@@ -104,21 +104,67 @@ async function processEntry(entry) {
     const rawExcerpt = (entry.dek || "").replace(/<[^>]*>?/gm, "").trim();
     const rawBody = entry.body || [];
 
-    // Translate Metadata
-    const translatedTitle = await translateText(entry.title || "Sin título");
-    const translatedExcerpt = await translateText(rawExcerpt);
+    // Combine all text for batch translation to save API calls and time
+    // We'll use delimiters to separate parts and help Gemini maintain structure
+    let contentToTranslate = `TITLE: ${entry.title || "Sin título"}\n\nEXCERPT: ${rawExcerpt}\n\n`;
+
+    const bodyBlocks = [];
+    if (rawBody && Array.isArray(rawBody)) {
+        rawBody.forEach((block, index) => {
+            if (block.type === "html" && block.data) {
+                contentToTranslate += `BLOCK_${index}: ${block.data}\n\n`;
+                bodyBlocks.push({ index, type: 'html', original: block.data });
+            } else if (block.type === "image" && block.data && block.data.url) {
+                bodyBlocks.push({ index, type: 'image', data: block.data });
+            }
+        });
+    }
+
+    const prompt = `Translate the following article metadata and blocks into professional "Spain Spanish" (Español de España).
+    Rules:
+    1. Maintain journalistic and sophisticated tone.
+    2. Preserve all HTML tags and structure exactly.
+    3. Keep technical terms like "machine learning" if standard in English.
+    4. Return exactly the same format with labels (TITLE:, EXCERPT:, BLOCK_N:).
+
+    ARTICLE:
+    ${contentToTranslate}`;
+
+    let translatedTitle = entry.title || "Sin título";
+    let translatedExcerpt = rawExcerpt;
+    const translationsMap = {};
+
+    try {
+        logger.info(`[DEVOPS] Batch translating article: ${entry.title}`);
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const text = response.text();
+
+        // Parse translations
+        const titleMatch = text.match(/TITLE:\s*(.*)/i);
+        if (titleMatch) translatedTitle = titleMatch[1].trim();
+
+        const excerptMatch = text.match(/EXCERPT:\s*([\s\S]*?)(?=BLOCK_0:|$)/i);
+        if (excerptMatch) translatedExcerpt = excerptMatch[1].trim();
+
+        bodyBlocks.forEach(block => {
+            if (block.type === 'html') {
+                const blockMatch = text.match(new RegExp(`BLOCK_${block.index}:\\s*([\\s\\S]*?)(?=BLOCK_\\d+:|$)`, 'i'));
+                if (blockMatch) translationsMap[block.index] = blockMatch[1].trim();
+            }
+        });
+    } catch (error) {
+        logger.error("Batch Translation error:", error);
+    }
 
     let fullHtmlContent = "";
-    if (rawBody && Array.isArray(rawBody)) {
-        for (const block of rawBody) {
-            if (block.type === "html" && block.data) {
-                const translatedBlock = await translateText(block.data);
-                fullHtmlContent += (translatedBlock || "");
-            } else if (block.type === "image" && block.data && block.data.url) {
-                fullHtmlContent += `<figure class="my-8"><img src="${block.data.url}" alt="${block.data.alt || ""}" class="w-full rounded-xl" /><figcaption class="text-xs text-center text-gray-500 mt-2">${block.data.caption || ""}</figcaption></figure>`;
-            }
+    bodyBlocks.forEach(block => {
+        if (block.type === "html") {
+            fullHtmlContent += (translationsMap[block.index] || block.original || "");
+        } else if (block.type === "image") {
+            fullHtmlContent += `<figure class="my-8"><img src="${block.data.url}" alt="${block.data.alt || ""}" class="w-full rounded-xl" /><figcaption class="text-xs text-center text-gray-500 mt-2">${block.data.caption || ""}</figcaption></figure>`;
         }
-    }
+    });
 
     const category = (entry.topics && entry.topics.length > 0) ? entry.topics[0].name : "General";
     const tags = entry.topics ? entry.topics.map(t => t.name) : [];
@@ -182,20 +228,26 @@ async function processEntry(entry) {
     return articleData;
 }
 
-/**
- * Logs API activity to Firestore
- */
-async function logToFirestore(type, status, message, details = null) {
+async function logToFirestore(type, status, message, details = null, docId = null) {
     try {
-        await db.collection("api_logs").add({
+        const logData = {
             timestamp: admin.firestore.FieldValue.serverTimestamp(),
             type, // 'sync' | 'auth' | 'system'
             status, // 'success' | 'error' | 'in_progress'
             message,
             details: details || {}
-        });
+        };
+
+        if (docId) {
+            await db.collection("api_logs").doc(docId).set(logData, { merge: true });
+            return docId;
+        } else {
+            const docRef = await db.collection("api_logs").add(logData);
+            return docRef.id;
+        }
     } catch (error) {
         logger.error("Error writing to api_logs collection:", error);
+        return null;
     }
 }
 
@@ -207,7 +259,7 @@ async function performSync(limit = 5, offset = 0) {
     let syncedCount = 0;
     const logId = `sync_${Date.now()}`;
 
-    await logToFirestore('sync', 'in_progress', `Iniciando sincronización (limit=${limit}, offset=${offset})`, { logId });
+    const internalLogId = await logToFirestore('sync', 'in_progress', `Iniciando sincronización (limit=${limit}, offset=${offset})`, { logId });
 
     try {
         const apiUrl = `https://wp.technologyreview.com/wp-json/mittr/v1/entries?limit=${limit}&offset=${offset}&sort=recent`;
@@ -218,12 +270,16 @@ async function performSync(limit = 5, offset = 0) {
         if (!entries || !Array.isArray(entries)) {
             const msg = "No se encontraron entradas en la respuesta de la API";
             logger.info(msg);
-            await logToFirestore('sync', 'success', msg, { logId, syncedCount: 0 });
+            await logToFirestore('sync', 'success', msg, { logId, syncedCount: 0 }, internalLogId);
             return 0;
         }
 
         for (const entry of entries) {
             const originalId = String(entry.id);
+
+            // Update progress in Firestore so the user sees something is happening
+            await logToFirestore('sync', 'in_progress', `Procesando artículo ${syncedCount + 1} de ${entries.length}...`, { logId, current: syncedCount + 1, total: entries.length }, internalLogId);
+
             const articleData = await processEntry(entry);
 
             const existing = await db.collection("articles").where("originalId", "==", originalId).get();
@@ -237,11 +293,11 @@ async function performSync(limit = 5, offset = 0) {
             syncedCount++;
         }
 
-        await logToFirestore('sync', 'success', `Sincronización completada: ${syncedCount} artículos procesados.`, { logId, syncedCount });
+        await logToFirestore('sync', 'success', `Sincronización completada: ${syncedCount} artículos procesados.`, { logId, syncedCount }, internalLogId);
         return syncedCount;
     } catch (error) {
         logger.error("Sync error:", error);
-        await logToFirestore('sync', 'error', `Error en la sincronización: ${error.message}`, { logId, stack: error.stack });
+        await logToFirestore('sync', 'error', `Error en la sincronización: ${error.message}`, { logId, stack: error.stack }, internalLogId);
         throw error;
     }
 }
@@ -260,17 +316,17 @@ exports.syncMITArticles = onSchedule({
  * Manual trigger for debugging
  * Usage: https://.../manualSync?limit=5&offset=0
  */
-exports.manualSync = onRequest({ maxInstances: 1, timeoutSeconds: 540 }, async (req, res) => {
+exports.manualSync = onCall({ timeoutSeconds: 540, maxInstances: 1 }, async (request) => {
     try {
-        const limit = parseInt(req.query.limit) || 5;
-        const offset = parseInt(req.query.offset) || 0;
+        const limit = parseInt(request.data.limit) || 5;
+        const offset = parseInt(request.data.offset) || 0;
 
         logger.info(`Starting manual sync with limit=${limit}, offset=${offset}`);
         const count = await performSync(limit, offset);
-        res.status(200).send(`Manual sync finished. Synced ${count} articles.`);
+        return { success: true, count, message: `Sincronización finalizada. ${count} artículos sincronizados.` };
     } catch (error) {
         logger.error("Manual sync error", error);
-        res.status(500).send(error.toString());
+        throw new Error(error.toString());
     }
 });
 

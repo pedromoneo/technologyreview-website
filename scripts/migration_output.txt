@@ -1,0 +1,18 @@
+Starting Authorized Users Migration...
+Migration failed: Error: Could not load the default credentials. Browse to https://cloud.google.com/docs/authentication/getting-started for more information.
+    at GoogleAuth.getApplicationDefaultAsync (/Users/pedromoneo/Library/CloudStorage/GoogleDrive-pedro.moneo@gmail.com/My Drive/Developer/technologyreview-website/node_modules/google-auth-library/build/src/auth/googleauth.js:287:15)
+    at async GoogleAuth._GoogleAuth_determineClient (/Users/pedromoneo/Library/CloudStorage/GoogleDrive-pedro.moneo@gmail.com/My Drive/Developer/technologyreview-website/node_modules/google-auth-library/build/src/auth/googleauth.js:834:32)
+    at async GoogleAuth.getClient (/Users/pedromoneo/Library/CloudStorage/GoogleDrive-pedro.moneo@gmail.com/My Drive/Developer/technologyreview-website/node_modules/google-auth-library/build/src/auth/googleauth.js:698:20)
+    at async GrpcClient._getCredentials (/Users/pedromoneo/Library/CloudStorage/GoogleDrive-pedro.moneo@gmail.com/My Drive/Developer/technologyreview-website/node_modules/google-gax/build/src/grpc.js:145:24)
+    at async GrpcClient.createStub (/Users/pedromoneo/Library/CloudStorage/GoogleDrive-pedro.moneo@gmail.com/My Drive/Developer/technologyreview-website/node_modules/google-gax/build/src/grpc.js:318:23)
+Caused by: Error
+    at QueryUtil._getResponse (/Users/pedromoneo/Library/CloudStorage/GoogleDrive-pedro.moneo@gmail.com/My Drive/Developer/technologyreview-website/node_modules/@google-cloud/firestore/build/src/reference/query-util.js:44:23)
+    at CollectionReference._getResponse (/Users/pedromoneo/Library/CloudStorage/GoogleDrive-pedro.moneo@gmail.com/My Drive/Developer/technologyreview-website/node_modules/@google-cloud/firestore/build/src/reference/query.js:784:32)
+    at CollectionReference._get (/Users/pedromoneo/Library/CloudStorage/GoogleDrive-pedro.moneo@gmail.com/My Drive/Developer/technologyreview-website/node_modules/@google-cloud/firestore/build/src/reference/query.js:777:35)
+    at /Users/pedromoneo/Library/CloudStorage/GoogleDrive-pedro.moneo@gmail.com/My Drive/Developer/technologyreview-website/node_modules/@google-cloud/firestore/build/src/reference/query.js:745:43
+    at /Users/pedromoneo/Library/CloudStorage/GoogleDrive-pedro.moneo@gmail.com/My Drive/Developer/technologyreview-website/node_modules/@google-cloud/firestore/build/src/telemetry/enabled-trace-util.js:110:30
+    at NoopContextManager.with (/Users/pedromoneo/Library/CloudStorage/GoogleDrive-pedro.moneo@gmail.com/My Drive/Developer/technologyreview-website/node_modules/@opentelemetry/api/build/src/context/NoopContextManager.js:25:19)
+    at ContextAPI.with (/Users/pedromoneo/Library/CloudStorage/GoogleDrive-pedro.moneo@gmail.com/My Drive/Developer/technologyreview-website/node_modules/@opentelemetry/api/build/src/api/context.js:60:46)
+    at NoopTracer.startActiveSpan (/Users/pedromoneo/Library/CloudStorage/GoogleDrive-pedro.moneo@gmail.com/My Drive/Developer/technologyreview-website/node_modules/@opentelemetry/api/build/src/trace/NoopTracer.js:65:31)
+    at ProxyTracer.startActiveSpan (/Users/pedromoneo/Library/CloudStorage/GoogleDrive-pedro.moneo@gmail.com/My Drive/Developer/technologyreview-website/node_modules/@opentelemetry/api/build/src/trace/ProxyTracer.js:36:24)
+    at EnabledTraceUtil.startActiveSpan (/Users/pedromoneo/Library/CloudStorage/GoogleDrive-pedro.moneo@gmail.com/My Drive/Developer/technologyreview-website/node_modules/@google-cloud/firestore/build/src/telemetry/enabled-trace-util.js:102:28)
