@@ -115,12 +115,18 @@ export default function CollectionForm({ collectionId }: CollectionFormProps) {
         }
 
         setLoading(true);
-        const data = {
+
+        const articleIds = selectedArticles.map(a => a.id);
+        const data: any = {
             ...formData,
-            articleIds: selectedArticles.map(a => a.id),
+            articleIds,
             updatedAt: serverTimestamp(),
-            createdAt: collectionId ? undefined : serverTimestamp(),
         };
+
+        // Only add createdAt if it's a new document
+        if (!collectionId) {
+            data.createdAt = serverTimestamp();
+        }
 
         try {
             if (collectionId) {

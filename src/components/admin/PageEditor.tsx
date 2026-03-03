@@ -54,11 +54,15 @@ export default function PageEditor({ pageId }: PageEditorProps) {
         e.preventDefault();
         setLoading(true);
 
-        const pageData = {
+        const pageData: any = {
             ...formData,
             updatedAt: serverTimestamp(),
-            createdAt: pageId ? undefined : serverTimestamp(),
         };
+
+        // Only add createdAt if it's a new document
+        if (!pageId) {
+            pageData.createdAt = serverTimestamp();
+        }
 
         try {
             if (pageId) {
