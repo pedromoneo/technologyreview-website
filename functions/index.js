@@ -100,9 +100,14 @@ async function generateSocialPost(articleData) {
 /**
  * Common logic to fetch, translate, and sync articles
  */
-async function processEntry(entry) {
+async function processEntry(entry, logId, internalLogId) {
     const originalId = String(entry.id);
     logger.info(`Processing article: ${entry.title} (${originalId})`);
+
+    // Update progress: starting translation
+    if (internalLogId) {
+        await logToFirestore('sync', 'in_progress', `Traduciendo: ${entry.title}...`, { logId }, internalLogId);
+    }
 
     // MIT API specific keys: 'dek' is excerpt (deck), 'body' is content
     const rawExcerpt = (entry.dek || "").replace(/<[^>]*>?/gm, "").trim();
@@ -216,6 +221,9 @@ async function processEntry(entry) {
 
     // Generate social post
     logger.info(`Generating social post for: ${articleData.title}`);
+    if (internalLogId) {
+        await logToFirestore('sync', 'in_progress', `Generando post social: ${articleData.title}...`, { logId }, internalLogId);
+    }
     const linkedinPost = await generateSocialPost(articleData);
     articleData.socialPosts = {
         linkedin: linkedinPost,
@@ -261,6 +269,7 @@ async function logToFirestore(type, status, message, details = null, docId = nul
 async function performSync(limit = 5, offset = 0) {
     const db = admin.firestore();
     let syncedCount = 0;
+    const processedArticles = [];
     const logId = `sync_${Date.now()}`;
 
     const internalLogId = await logToFirestore('sync', 'in_progress', `Iniciando sincronización (limit=${limit}, offset=${offset})`, { logId });
@@ -284,20 +293,41 @@ async function performSync(limit = 5, offset = 0) {
             // Update progress in Firestore so the user sees something is happening
             await logToFirestore('sync', 'in_progress', `Procesando artículo ${syncedCount + 1} de ${entries.length}...`, { logId, current: syncedCount + 1, total: entries.length }, internalLogId);
 
-            const articleData = await processEntry(entry);
+            try {
+                const articleData = await processEntry(entry, logId, internalLogId);
 
-            const existing = await db.collection("articles").where("originalId", "==", originalId).get();
-            if (!existing.empty) {
-                logger.info(`Article already exists, updating: ${articleData.title}`);
-                await existing.docs[0].ref.set(articleData, { merge: true });
-            } else {
-                logger.info(`Creating new article: ${articleData.title}`);
-                await db.collection("articles").add(articleData);
+                const existing = await db.collection("articles").where("originalId", "==", originalId).get();
+                if (!existing.empty) {
+                    logger.info(`Article already exists, updating: ${articleData.title}`);
+                    await existing.docs[0].ref.set(articleData, { merge: true });
+                } else {
+                    logger.info(`Creating new article: ${articleData.title}`);
+                    await db.collection("articles").add(articleData);
+                }
+
+                processedArticles.push({
+                    id: originalId,
+                    title: articleData.title,
+                    status: 'success'
+                });
+            } catch (articleError) {
+                logger.error(`Error processing article ${originalId}:`, articleError);
+                processedArticles.push({
+                    id: originalId,
+                    title: entry.title || "Artículo sin título",
+                    status: 'error',
+                    error: articleError.message
+                });
             }
+
             syncedCount++;
         }
 
-        await logToFirestore('sync', 'success', `Sincronización completada: ${syncedCount} artículos procesados.`, { logId, syncedCount }, internalLogId);
+        await logToFirestore('sync', 'success', `Sincronización completada: ${syncedCount} artículos procesados.`, {
+            logId,
+            syncedCount,
+            processedArticles // Store the list for the UI to display
+        }, internalLogId);
         return syncedCount;
     } catch (error) {
         logger.error("Sync error:", error);
@@ -321,9 +351,9 @@ exports.syncMITArticles = onSchedule({
  * Usage: https://.../manualSync?limit=5&offset=0
  */
 exports.manualSync = onCall({
-    timeoutSeconds: 540,
+    timeoutSeconds: 1200,
     maxInstances: 1,
-    memory: "512MiB"
+    memory: "1GiB"
 }, async (request) => {
     try {
         const limit = parseInt(request.data.limit) || 5;

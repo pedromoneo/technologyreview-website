@@ -35,6 +35,7 @@ export default function LogsPage() {
     const [loading, setLoading] = useState(true);
     const [syncing, setSyncing] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
 
     useEffect(() => {
         const q = query(
@@ -65,7 +66,7 @@ export default function LogsPage() {
         setError(null);
         try {
             const manualSync = httpsCallable(functions, 'manualSync', {
-                timeout: 600000 // 10 minutes (longer than the backend 540s to ensure we catch the backend error first)
+                timeout: 1200000 // 20 minutes
             });
             await manualSync({ limit: 5, offset: 0 });
         } catch (err: any) {
@@ -103,6 +104,7 @@ export default function LogsPage() {
 
     return (
         <div className="p-8 max-w-7xl mx-auto">
+            {/* Header section */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
                 <div>
                     <div className="flex items-center space-x-3 mb-2">
@@ -124,7 +126,7 @@ export default function LogsPage() {
                     className="flex items-center justify-center space-x-3 px-8 py-4 bg-primary text-white rounded-xl font-black uppercase tracking-widest text-sm hover:bg-black transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-xl active:scale-95"
                 >
                     <RefreshCcw className={`w-5 h-5 ${syncing ? 'animate-spin' : ''}`} />
-                    <span>{syncing ? 'Sincronizando...' : 'Sincronizar Ahora'}</span>
+                    <span>{syncing ? 'Sincronizar Ahora' : 'Sincronizar Ahora'}</span>
                 </button>
             </div>
 
@@ -165,44 +167,74 @@ export default function LogsPage() {
                                 </tr>
                             ) : (
                                 logs.map((log) => (
-                                    <tr key={log.id} className="hover:bg-gray-50/50 transition-colors group">
-                                        <td className="px-6 py-5">
-                                            <div className="text-sm font-bold text-gray-900 tracking-tight">
-                                                {log.timestamp?.toDate().toLocaleDateString('es-ES', {
-                                                    day: '2-digit',
-                                                    month: 'long'
-                                                })}
-                                            </div>
-                                            <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                                                {log.timestamp?.toDate().toLocaleTimeString('es-ES', {
-                                                    hour: '2-digit',
-                                                    minute: '2-digit',
-                                                    second: '2-digit'
-                                                })}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-5">
-                                            <span className="text-[10px] font-black uppercase tracking-widest bg-gray-100 px-2 py-1 rounded text-gray-600">
-                                                {log.type}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-5">
-                                            <StatusBadge status={log.status} />
-                                        </td>
-                                        <td className="px-6 py-5">
-                                            <p className="text-sm font-medium text-gray-700 max-w-md truncate">
-                                                {log.message}
-                                            </p>
-                                        </td>
-                                        <td className="px-6 py-5 text-right">
-                                            <button
-                                                onClick={() => console.log(log.details)}
-                                                className="p-2 text-gray-300 hover:text-primary transition-colors hover:scale-110 active:scale-90"
-                                            >
-                                                <ChevronRight className="w-5 h-5" />
-                                            </button>
-                                        </td>
-                                    </tr>
+                                    <>
+                                        <tr key={log.id} className="hover:bg-gray-50/50 transition-colors group">
+                                            <td className="px-6 py-5">
+                                                <div className="text-sm font-bold text-gray-900 tracking-tight">
+                                                    {log.timestamp?.toDate().toLocaleDateString('es-ES', {
+                                                        day: '2-digit',
+                                                        month: 'long'
+                                                    })}
+                                                </div>
+                                                <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                                    {log.timestamp?.toDate().toLocaleTimeString('es-ES', {
+                                                        hour: '2-digit',
+                                                        minute: '2-digit',
+                                                        second: '2-digit'
+                                                    })}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-5">
+                                                <span className="text-[10px] font-black uppercase tracking-widest bg-gray-100 px-2 py-1 rounded text-gray-600">
+                                                    {log.type}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-5">
+                                                <StatusBadge status={log.status} />
+                                            </td>
+                                            <td className="px-6 py-5">
+                                                <p className="text-sm font-medium text-gray-700 max-w-md truncate">
+                                                    {log.message}
+                                                </p>
+                                            </td>
+                                            <td className="px-6 py-5 text-right">
+                                                <button
+                                                    onClick={() => setExpandedLogId(expandedLogId === log.id ? null : log.id)}
+                                                    className={`p-2 transition-all hover:scale-110 active:scale-90 ${expandedLogId === log.id ? 'text-primary rotate-90' : 'text-gray-300 hover:text-primary'}`}
+                                                >
+                                                    <ChevronRight className="w-5 h-5" />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        {/* Expanded Articles List */}
+                                        {expandedLogId === log.id && log.details?.processedArticles && (
+                                            <tr className="bg-gray-50/30">
+                                                <td colSpan={5} className="px-12 py-6 border-l-4 border-primary">
+                                                    <div className="space-y-4">
+                                                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary mb-4">
+                                                            Artículos Procesados
+                                                        </h4>
+                                                        <div className="grid grid-cols-1 gap-2">
+                                                            {log.details.processedArticles.map((article: any, idx: number) => (
+                                                                <div key={idx} className="flex items-center justify-between p-3 bg-white rounded-xl border border-gray-100 shadow-sm">
+                                                                    <div className="flex items-center space-x-3">
+                                                                        <div className={`w-2 h-2 rounded-full ${article.status === 'success' ? 'bg-green-500' : 'bg-red-500'}`} />
+                                                                        <span className="text-xs font-bold text-gray-800">{article.title}</span>
+                                                                        <span className="text-[10px] text-gray-400 font-medium font-mono">ID: {article.id}</span>
+                                                                    </div>
+                                                                    {article.error && (
+                                                                        <span className="text-[10px] text-red-500 font-bold uppercase tracking-tighter max-w-xs truncate">
+                                                                            {article.error}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </>
                                 ))
                             )}
                         </tbody>
@@ -212,3 +244,4 @@ export default function LogsPage() {
         </div>
     );
 }
+
