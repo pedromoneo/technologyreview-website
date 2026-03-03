@@ -13,12 +13,16 @@ const db = admin.firestore();
 
 // Initialize Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-// Explicitly using gemini-2.5-flash as requested and verified available
-const MODEL_NAME = "gemini-2.5-flash";
+// Explicitly using gemini-2.0-flash as it is the stable latest version
+const MODEL_NAME = "gemini-2.0-flash";
 
 let model;
 try {
-    model = genAI.getGenerativeModel({ model: MODEL_NAME });
+    model = genAI.getGenerativeModel({
+        model: MODEL_NAME,
+        // Set higher timeout for the model itself
+        requestOptions: { timeout: 300000 }
+    });
     logger.info(`Gemini Model ${MODEL_NAME} initialized successfully.`);
 } catch (e) {
     logger.error(`Error initializing Gemini model ${MODEL_NAME}:`, e);
@@ -316,7 +320,11 @@ exports.syncMITArticles = onSchedule({
  * Manual trigger for debugging
  * Usage: https://.../manualSync?limit=5&offset=0
  */
-exports.manualSync = onCall({ timeoutSeconds: 540, maxInstances: 1 }, async (request) => {
+exports.manualSync = onCall({
+    timeoutSeconds: 540,
+    maxInstances: 1,
+    memory: "512MiB"
+}, async (request) => {
     try {
         const limit = parseInt(request.data.limit) || 5;
         const offset = parseInt(request.data.offset) || 0;
@@ -326,7 +334,12 @@ exports.manualSync = onCall({ timeoutSeconds: 540, maxInstances: 1 }, async (req
         return { success: true, count, message: `Sincronización finalizada. ${count} artículos sincronizados.` };
     } catch (error) {
         logger.error("Manual sync error", error);
-        throw new Error(error.toString());
+        // Provide more detailed information if it was a timeout
+        const errorMsg = error.toString();
+        if (errorMsg.includes("DEADLINE_EXCEEDED") || errorMsg.includes("timeout")) {
+            throw new Error("El proceso excedió el tiempo límite (9 min). Intenta sincronizar menos artículos a la vez.");
+        }
+        throw new Error(errorMsg);
     }
 });
 

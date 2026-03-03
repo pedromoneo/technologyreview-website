@@ -64,7 +64,9 @@ export default function LogsPage() {
         setSyncing(true);
         setError(null);
         try {
-            const manualSync = httpsCallable(functions, 'manualSync');
+            const manualSync = httpsCallable(functions, 'manualSync', {
+                timeout: 600000 // 10 minutes (longer than the backend 540s to ensure we catch the backend error first)
+            });
             await manualSync({ limit: 5, offset: 0 });
         } catch (err: any) {
             console.error("Sync error:", err);
