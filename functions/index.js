@@ -183,11 +183,31 @@ async function processEntry(entry) {
 }
 
 /**
+ * Logs API activity to Firestore
+ */
+async function logToFirestore(type, status, message, details = null) {
+    try {
+        await db.collection("api_logs").add({
+            timestamp: admin.firestore.FieldValue.serverTimestamp(),
+            type, // 'sync' | 'auth' | 'system'
+            status, // 'success' | 'error' | 'in_progress'
+            message,
+            details: details || {}
+        });
+    } catch (error) {
+        logger.error("Error writing to api_logs collection:", error);
+    }
+}
+
+/**
  * Common logic to fetch, translate, and sync articles
  */
 async function performSync(limit = 5, offset = 0) {
     const db = admin.firestore();
     let syncedCount = 0;
+    const logId = `sync_${Date.now()}`;
+
+    await logToFirestore('sync', 'in_progress', `Iniciando sincronización (limit=${limit}, offset=${offset})`, { logId });
 
     try {
         const apiUrl = `https://wp.technologyreview.com/wp-json/mittr/v1/entries?limit=${limit}&offset=${offset}&sort=recent`;
@@ -196,7 +216,9 @@ async function performSync(limit = 5, offset = 0) {
         const entries = response.data.entries;
 
         if (!entries || !Array.isArray(entries)) {
-            logger.info("No entries found in API response");
+            const msg = "No se encontraron entradas en la respuesta de la API";
+            logger.info(msg);
+            await logToFirestore('sync', 'success', msg, { logId, syncedCount: 0 });
             return 0;
         }
 
@@ -207,7 +229,6 @@ async function performSync(limit = 5, offset = 0) {
             const existing = await db.collection("articles").where("originalId", "==", originalId).get();
             if (!existing.empty) {
                 logger.info(`Article already exists, updating: ${articleData.title}`);
-                // Use update to preserve other fields, or set with merge
                 await existing.docs[0].ref.set(articleData, { merge: true });
             } else {
                 logger.info(`Creating new article: ${articleData.title}`);
@@ -215,9 +236,12 @@ async function performSync(limit = 5, offset = 0) {
             }
             syncedCount++;
         }
+
+        await logToFirestore('sync', 'success', `Sincronización completada: ${syncedCount} artículos procesados.`, { logId, syncedCount });
         return syncedCount;
     } catch (error) {
         logger.error("Sync error:", error);
+        await logToFirestore('sync', 'error', `Error en la sincronización: ${error.message}`, { logId, stack: error.stack });
         throw error;
     }
 }

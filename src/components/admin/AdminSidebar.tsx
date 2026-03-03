@@ -13,7 +13,8 @@ import {
     ExternalLink,
     ChevronLeft,
     ChevronRight,
-    LayoutTemplate
+    LayoutTemplate,
+    Activity
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 
@@ -36,6 +37,7 @@ export default function AdminSidebar({ isCollapsed, onToggle }: AdminSidebarProp
     ];
 
     const settingsItems = [
+        { label: "Actividad", href: "/admin/logs", icon: Activity },
         { label: "Ajustes", href: "/admin/settings", icon: Settings },
         { label: "Usuarios", href: "/admin/users", icon: Users },
     ];
