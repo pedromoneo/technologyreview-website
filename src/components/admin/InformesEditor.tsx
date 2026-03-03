@@ -7,6 +7,7 @@ import { ArrowLeft, Save, Image as ImageIcon, Type, Search, Plus, Check, X, File
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { slugify } from "@/lib/content-utils";
 
 interface Article {
     id: string;
@@ -103,7 +104,6 @@ export default function InformesEditor({ informeId }: InformesEditorProps) {
             const newData = { ...prev, [name]: value };
             // Auto-generate slug from title if slug is empty or currently matches a slugified old title
             if (name === "title" && !formData.slug) {
-                const { slugify } = require("@/lib/content-utils");
                 newData.slug = slugify(value);
             }
             return newData;
