@@ -10,7 +10,7 @@ service cloud.firestore {
 
     // Public collections for reading
     match /articles/{articleId} {
-      allow read: if true;
+      allow read: if resource == null || resource.data.status in ['published', 'featured'] || isAdmin();
       allow write: if isAdmin();
     }
 
@@ -52,7 +52,7 @@ service cloud.firestore {
 
     // Informes (Special reports)
     match /informes/{informeId} {
-      allow read: if true;
+      allow read: if resource == null || resource.data.status in ['published', 'featured'] || isAdmin();
       allow write: if isAdmin();
     }
 

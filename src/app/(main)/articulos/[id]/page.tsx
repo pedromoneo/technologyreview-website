@@ -9,6 +9,25 @@ import ViewTracker from "@/components/ViewTracker";
 
 export const revalidate = 3600; // 1 hour revalidation
 
+export async function generateStaticParams() {
+    if (!db) return [];
+    try {
+        // Pre-render the 20 most recently published articles
+        const articlesSnap = await db.collection("articles")
+            .where("status", "in", ["published", "featured"])
+            .orderBy("publishedAt", "desc")
+            .limit(20)
+            .get();
+
+        return articlesSnap.docs.map((doc) => ({
+            id: doc.id,
+        }));
+    } catch (e) {
+        console.error("Error generating static params", e);
+        return [];
+    }
+}
+
 interface ArticlePageProps {
     params: Promise<{ id: string }>;
 }

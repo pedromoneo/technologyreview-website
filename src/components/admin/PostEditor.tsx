@@ -121,7 +121,7 @@ export default function PostEditor({ postId }: PostEditorProps) {
             if (postId) {
                 await updateDoc(doc(db, "articles", postId), postData);
             } else {
-                let slug = slugify(formData.title);
+                const slug = slugify(formData.title);
                 let uniqueSlug = slug;
                 let counter = 1;
                 let existingDoc = await getDoc(doc(db, "articles", uniqueSlug));

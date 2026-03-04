@@ -6,7 +6,6 @@ import { db } from "@/lib/firebase-admin";
 import { slugify } from "@/lib/content-utils";
 import LoadMoreStories from "@/components/home/LoadMoreStories";
 
-export const dynamic = "force-dynamic";
 export const revalidate = 600; // 10 minutes cache
 
 export default async function Home() {

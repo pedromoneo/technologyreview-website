@@ -3,7 +3,6 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   serverExternalPackages: ['firebase-admin'],
   images: {
-    unoptimized: true,
     remotePatterns: [
       {
         protocol: 'https',
@@ -24,8 +23,13 @@ const nextConfig: NextConfig = {
       {
         protocol: 'https',
         hostname: 'technologyreview.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'technologyreview.es',
       }
     ],
+    unoptimized: true,
   },
 };
 

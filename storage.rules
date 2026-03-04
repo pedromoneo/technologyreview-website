@@ -1,9 +1,10 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    // Helper function to check if user is admin
     function isAdmin() {
-      return request.auth != null && request.auth.token.email == 'pedro.moneo@gmail.com';
+      let isSuperAdmin = request.auth != null && request.auth.token.email == 'pedro.moneo@gmail.com';
+      let isAuthorized = request.auth != null && firestore.exists(/databases/(default)/documents/authorized_users/$(request.auth.token.email.lower()));
+      return isSuperAdmin || isAuthorized;
     }
 
     match /{allPaths=**} {
