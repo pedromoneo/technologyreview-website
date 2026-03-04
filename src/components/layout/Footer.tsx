@@ -16,6 +16,7 @@ export default function Footer() {
                                     alt="MIT Technology Review"
                                     fill
                                     className="object-contain object-left"
+                                    sizes="(max-width: 768px) 256px, 320px"
                                 />
                             </div>
                             <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest mt-4">

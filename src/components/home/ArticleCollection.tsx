@@ -161,6 +161,7 @@ export default function ArticleCollection({ collectionId }: ArticleCollectionPro
                                 alt={article.title}
                                 fill
                                 className="object-cover transition-transform duration-700 group-hover:scale-110"
+                                sizes="(max-width: 768px) 280px, 380px"
                             />
                         </div>
 

@@ -22,6 +22,7 @@ export default function ArticleCard({ article, featured = false }: ArticleCardPr
                         fill
                         priority
                         className="object-cover transition-transform duration-1000 group-hover:scale-110"
+                        sizes="(max-width: 768px) 100vw, 50vw"
                     />
                 </div>
                 {/* Content Container */}
@@ -29,9 +30,9 @@ export default function ArticleCard({ article, featured = false }: ArticleCardPr
                     <span className="inline-block bg-accent text-primary text-[11px] font-black tracking-[0.2em] uppercase px-3 py-1 mb-8 self-start">
                         {article.category}
                     </span>
-                    <h2 className="text-4xl md:text-6xl font-black mb-8 leading-[1.05] tracking-tighter">
+                    <h1 className="text-4xl md:text-6xl font-black mb-8 leading-[1.05] tracking-tighter">
                         {article.title}
-                    </h2>
+                    </h1>
                     <p className="text-gray-300 text-lg mb-10 leading-relaxed max-w-xl">
                         {truncateToSentence(cleanedExcerpt, 350)}
                     </p>
@@ -53,6 +54,7 @@ export default function ArticleCard({ article, featured = false }: ArticleCardPr
                     alt={article.title}
                     fill
                     className="object-cover transition-transform duration-1000 group-hover:scale-110"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 800px"
                 />
                 <div className="absolute top-4 left-4">
                     <span className="bg-accent text-primary text-[9px] font-black tracking-widest uppercase px-2 py-0.5">

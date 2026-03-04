@@ -139,6 +139,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
                                 fill
                                 className="object-cover transition-transform duration-700 group-hover:scale-105"
                                 priority
+                                sizes="(max-width: 768px) 100vw, 800px"
                             />
                             <div className="absolute inset-0 ring-1 ring-inset ring-black/10 pointer-events-none" />
                         </div>
@@ -235,7 +236,13 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
                                 {relatedArticles.map((ra) => (
                                     <Link key={ra.id} href={`/articulos/${ra.id}`} className="group block">
                                         <div className="relative aspect-video mb-4 overflow-hidden">
-                                            <Image src={ra.imageUrl} alt={ra.title} fill className="object-cover transition-transform group-hover:scale-110 duration-500" />
+                                            <Image
+                                                src={ra.imageUrl}
+                                                alt={ra.title}
+                                                fill
+                                                className="object-cover transition-transform group-hover:scale-110 duration-500"
+                                                sizes="(max-width: 768px) 100vw, 320px"
+                                            />
                                         </div>
                                         <span className="text-[9px] font-black uppercase tracking-[0.2em] text-accent mb-2 block">{ra.category}</span>
                                         <h4 className="text-sm font-black uppercase tracking-tight leading-tight group-hover:text-accent transition-colors">
