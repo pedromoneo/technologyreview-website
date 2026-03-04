@@ -2,13 +2,14 @@
 
 import { useState, useEffect, useRef } from "react";
 import { db, storage } from "@/lib/firebase";
-import { collection, addDoc, updateDoc, doc, getDoc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, updateDoc, doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { ArrowLeft, Save, Image as ImageIcon, Tag, Layout, Type, User, Calendar, Clock, Upload, Loader2, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import WysiwygEditor from "./WysiwygEditor";
+import { slugify } from "@/lib/content-utils";
 
 interface PostEditorProps {
     postId?: string;
@@ -120,7 +121,18 @@ export default function PostEditor({ postId }: PostEditorProps) {
             if (postId) {
                 await updateDoc(doc(db, "articles", postId), postData);
             } else {
-                await addDoc(collection(db, "articles"), postData);
+                let slug = slugify(formData.title);
+                let uniqueSlug = slug;
+                let counter = 1;
+                let existingDoc = await getDoc(doc(db, "articles", uniqueSlug));
+
+                while (existingDoc.exists()) {
+                    uniqueSlug = `${slug}-${counter}`;
+                    counter++;
+                    existingDoc = await getDoc(doc(db, "articles", uniqueSlug));
+                }
+
+                await setDoc(doc(db, "articles", uniqueSlug), postData);
             }
             router.push("/admin/posts");
         } catch (error) {

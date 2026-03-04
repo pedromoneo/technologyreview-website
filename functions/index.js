@@ -244,7 +244,7 @@ async function processEntry(entry, logId, internalLogId) {
 async function logToFirestore(type, status, message, details = null, docId = null) {
     try {
         const logData = {
-            timestamp: admin.firestore.FieldValue.serverTimestamp(),
+            timestamp: new Date(),
             type, // 'sync' | 'auth' | 'system'
             status, // 'success' | 'error' | 'in_progress'
             message,
@@ -295,19 +295,38 @@ async function performSync(limit = 5, offset = 0) {
             await logToFirestore('sync', 'in_progress', `Procesando artículo ${syncedCount + 1} de ${entries.length}...`, { logId, current: syncedCount + 1, total: entries.length }, internalLogId);
 
             try {
-                const articleData = await processEntry(entry, logId, internalLogId);
-
                 const existing = await db.collection("articles").where("originalId", "==", originalId).get();
                 if (!existing.empty) {
-                    logger.info(`Article already exists, updating: ${articleData.title}`);
-                    await existing.docs[0].ref.set(articleData, { merge: true });
-                } else {
-                    logger.info(`Creating new article: ${articleData.title}`);
-                    await db.collection("articles").add(articleData);
+                    logger.info(`Article already exists, skipping: ${entry.title || originalId}`);
+                    processedArticles.push({
+                        id: originalId,
+                        title: entry.title || "Artículo sin título",
+                        status: 'skipped'
+                    });
+                    syncedCount++;
+                    continue;
                 }
 
+                const articleData = await processEntry(entry, logId, internalLogId);
+
+                // Generate a slug from the title for the document ID
+                let slug = articleData.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+                // Check for collision
+                let uniqueSlug = slug;
+                let counter = 1;
+                let existingDoc = await db.collection("articles").doc(uniqueSlug).get();
+                while (existingDoc.exists) {
+                    uniqueSlug = `${slug}-${counter}`;
+                    counter++;
+                    existingDoc = await db.collection("articles").doc(uniqueSlug).get();
+                }
+
+                logger.info(`Creating new article: ${articleData.title} with slug: ${uniqueSlug}`);
+                // Use set() with the unique slug instead of add()
+                await db.collection("articles").doc(uniqueSlug).set(articleData);
+
                 processedArticles.push({
-                    id: originalId,
+                    id: uniqueSlug, // Use the generated slug as the ID
                     title: articleData.title,
                     status: 'success'
                 });
