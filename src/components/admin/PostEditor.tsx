@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { db, storage } from "@/lib/firebase";
-import { collection, addDoc, updateDoc, doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, updateDoc, doc, getDoc, setDoc, serverTimestamp, Timestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { ArrowLeft, Save, Image as ImageIcon, Tag, Layout, Type, User, Calendar, Clock, Upload, Loader2, X } from "lucide-react";
 import Image from "next/image";
@@ -18,6 +18,7 @@ interface PostEditorProps {
 export default function PostEditor({ postId }: PostEditorProps) {
     const router = useRouter();
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const postLoadedRef = useRef(false);
     const [loading, setLoading] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [categories, setCategories] = useState<string[]>([]);
@@ -54,6 +55,9 @@ export default function PostEditor({ postId }: PostEditorProps) {
 
     useEffect(() => {
         if (!postId) return;
+        // Prevent re-fetching the post when categories load after the post
+        // has already been loaded (which would reset user edits like isFeaturedInHeader)
+        if (postLoadedRef.current) return;
 
         const fetchPost = async () => {
             try {
@@ -69,11 +73,12 @@ export default function PostEditor({ postId }: PostEditorProps) {
                         author: data.author || "Redacción",
                         imageUrl: data.imageUrl || "",
                         status: data.status || "draft",
-                        isFeaturedInHeader: data.isFeaturedInHeader || false,
+                        isFeaturedInHeader: data.isFeaturedInHeader === true,
                         date: data.date || new Date().toISOString().split("T")[0],
                         readingTime: data.readingTime || "5 min",
                         tags: (data.tags || []).join(", ")
                     });
+                    postLoadedRef.current = true;
                 }
             } catch (error) {
                 console.error("Error fetching article:", error);
@@ -110,8 +115,9 @@ export default function PostEditor({ postId }: PostEditorProps) {
         e.preventDefault();
         setLoading(true);
 
-        const postData = {
+        const postData: Record<string, any> = {
             ...formData,
+            isFeaturedInHeader: formData.isFeaturedInHeader === true, // Ensure boolean
             tags: formData.tags.split(",").map(t => t.trim()).filter(t => t !== ""),
             updatedAt: serverTimestamp(),
             migratedAt: serverTimestamp(), // Keep this for sorting compatibility
@@ -121,6 +127,9 @@ export default function PostEditor({ postId }: PostEditorProps) {
             if (postId) {
                 await updateDoc(doc(db, "articles", postId), postData);
             } else {
+                // New articles need a publishedAt timestamp for homepage ordering
+                postData.publishedAt = serverTimestamp();
+
                 const slug = slugify(formData.title);
                 let uniqueSlug = slug;
                 let counter = 1;

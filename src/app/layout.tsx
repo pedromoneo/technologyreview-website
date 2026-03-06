@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import Script from "next/script";
 import "./globals.css";
 
 const inter = Inter({
@@ -28,14 +27,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es">
-      <head>
-        <Script
-          async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-PON_AQUI_TU_ID"
-          crossOrigin="anonymous"
-          strategy="lazyOnload"
-        />
-      </head>
+      <head />
+
       <body className={`${inter.variable} antialiased`}>
         <AuthProvider>
           {children}

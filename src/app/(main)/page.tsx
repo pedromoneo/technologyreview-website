@@ -18,19 +18,30 @@ export default async function Home() {
     );
   }
 
-  // 1. Fetch featured post if any
-  const featuredSnap = await db.collection("articles")
-    .where("status", "in", ["published", "featured"])
-    .where("isFeaturedInHeader", "==", true)
-    .limit(1)
-    .get();
-
-  // 2. Fetch latest posts (fetch more to allow for splitting)
-  const latestSnap = await db.collection("articles")
-    .where("status", "in", ["published", "featured"])
-    .orderBy("publishedAt", "desc")
-    .limit(21)
-    .get();
+  // Run all Firestore queries in parallel for faster page load
+  const [featuredSnap, latestSnap, categoriesSnap, collectionsSnap, featuredInformesSnap] = await Promise.all([
+    // 1. Featured post
+    db.collection("articles")
+      .where("status", "in", ["published", "featured"])
+      .where("isFeaturedInHeader", "==", true)
+      .limit(1)
+      .get(),
+    // 2. Latest posts
+    db.collection("articles")
+      .where("status", "in", ["published", "featured"])
+      .orderBy("publishedAt", "desc")
+      .limit(21)
+      .get(),
+    // 3. Categories
+    db.collection("settings").doc("categories").get(),
+    // 4. Collections
+    db.collection("collections").orderBy("createdAt", "desc").get(),
+    // 5. Featured Informes
+    db.collection("informes")
+      .where("status", "==", "featured")
+      .limit(5)
+      .get(),
+  ]);
 
   const allFetched = latestSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   let featuredData = featuredSnap.docs.length > 0 ? { id: featuredSnap.docs[0].id, ...featuredSnap.docs[0].data() } : null;
@@ -54,7 +65,6 @@ export default async function Home() {
 
   const featuredArticle = featuredData ? mapArticle(featuredData) : null;
   const filteredLatest = allFetched.filter(a => a.id !== featuredArticle?.id);
-
   const latestArticles = filteredLatest.map(mapArticle);
 
   // Get the last article's timestamp for pagination
@@ -70,23 +80,13 @@ export default async function Home() {
   const next8 = latestArticles.slice(4, 12);
   const remaining = latestArticles.slice(12);
 
-  // 3. Fetch categories for sidebar
-  const categoriesSnap = await db.collection("settings").doc("categories").get();
   const sideTopics = categoriesSnap.exists ? (categoriesSnap.data()?.list || []) : ["Inteligencia Artificial", "Biotecnología", "Energía", "Espacio", "Sostenibilidad", "Negocios"];
 
-  // 4. Fetch Collections
-  const collectionsSnap = await db.collection("collections").orderBy("createdAt", "desc").get();
   const allCollections = collectionsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
   const pos1Collections = allCollections.filter((c: any) => c.insertionPoint === 'pos1');
   const pos2Collections = allCollections.filter((c: any) => c.insertionPoint === 'pos2');
   const footerCollections = allCollections.filter((c: any) => c.insertionPoint === 'footer' || !c.insertionPoint);
 
-  // 5. Fetch Featured Informes for Sidebar
-  const featuredInformesSnap = await db.collection("informes")
-    .where("status", "==", "featured")
-    .limit(5)
-    .get();
   const featuredInformes = featuredInformesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
   return (

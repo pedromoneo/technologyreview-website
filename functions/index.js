@@ -178,27 +178,68 @@ async function processEntry(entry, logId, internalLogId) {
     const category = (entry.topics && entry.topics.length > 0) ? entry.topics[0].name : "General";
     const tags = entry.topics ? entry.topics.map(t => t.name) : [];
 
-    // Image Discovery logic
+    // Image Discovery logic - improved to find the actual article hero image
     let imageUrl = null;
 
-    // 1. Try images array (usually most reliable)
-    if (entry.images && Array.isArray(entry.images) && entry.images.length > 0) {
-        // Try to find a good one, or just take the first
-        const img = entry.images[0];
-        if (img && img.url) {
-            // Strip WP resizing parameters to get full image if possible
-            imageUrl = img.url.split('?')[0];
-        }
+    // 1. Try topper first (hero image, most reliable for article main image)
+    if (entry.topper && entry.topper.image && entry.topper.image.url) {
+        imageUrl = entry.topper.image.url.split('?')[0];
+        logger.info(`Image found via topper: ${imageUrl}`);
     }
 
-    // 2. Fallback to topper
-    if (!imageUrl && entry.topper && entry.topper.image && entry.topper.image.url) {
-        imageUrl = entry.topper.image.url.split('?')[0];
+    // 2. Try images array - find the best candidate (largest, non-logo image)
+    if (!imageUrl && entry.images && Array.isArray(entry.images) && entry.images.length > 0) {
+        // Filter out small images (logos, icons) and known logo patterns
+        const candidates = entry.images.filter(img => {
+            if (!img || !img.url) return false;
+            const url = img.url.toLowerCase();
+            // Skip logos, icons, and very small images
+            if (url.includes('logo') || url.includes('icon') || url.includes('favicon')) return false;
+            // Prefer images with reasonable dimensions (not thumbnails)
+            if (img.width && img.height && img.width >= 400 && img.height >= 200) return true;
+            // If no dimensions, include but deprioritize
+            return true;
+        });
+
+        // Sort by area (largest first) to get the best hero image
+        candidates.sort((a, b) => {
+            const areaA = (a.width || 0) * (a.height || 0);
+            const areaB = (b.width || 0) * (b.height || 0);
+            return areaB - areaA;
+        });
+
+        // Pick the largest image that looks like a hero/social card
+        const best = candidates.find(img => {
+            const w = img.width || 0;
+            const h = img.height || 0;
+            // Prefer landscape images (hero-style), skip very tall/portrait images (report covers)
+            if (w > 0 && h > 0) {
+                const ratio = w / h;
+                return ratio >= 1.0; // Landscape or square
+            }
+            return true;
+        }) || candidates[0];
+
+        if (best && best.url) {
+            // Strip WP resizing parameters to get full-resolution image
+            imageUrl = best.url.split('?')[0];
+            logger.info(`Image found via images array: ${imageUrl} (${best.width}x${best.height})`);
+        }
     }
 
     // 3. Fallback to attachments
     if (!imageUrl && entry.attachments && entry.attachments.thumbnail && entry.attachments.thumbnail.url) {
         imageUrl = entry.attachments.thumbnail.url.split('?')[0];
+        logger.info(`Image found via attachments: ${imageUrl}`);
+    }
+
+    // 4. Fallback: look for first image in body content
+    if (!imageUrl) {
+        const bodyImage = bodyBlocks.find(b => b.type === 'image' && b.data && b.data.url);
+        if (bodyImage) {
+            imageUrl = bodyImage.data.url.split('?')[0];
+            logger.info(`Image found via body content: ${imageUrl}`);
+        }
     }
 
     const articleData = {
@@ -213,6 +254,7 @@ async function processEntry(entry, logId, internalLogId) {
         imageUrl: imageUrl || null,
         readingTime: `${entry.word_count ? Math.ceil(entry.word_count / 200) : 5} min`,
         status: "published",
+        isFeaturedInHeader: true,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         migratedAt: admin.firestore.FieldValue.serverTimestamp(),
         originalId: originalId,
