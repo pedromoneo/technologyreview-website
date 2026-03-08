@@ -11,58 +11,374 @@ const crypto = require("crypto");
 admin.initializeApp();
 const db = admin.firestore();
 
-// Initialize Gemini
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 // Explicitly using gemini-2.5-flash as the latest standard version
 const MODEL_NAME = "gemini-2.5-flash";
+const TRANSLATION_SECRET_NAMES = ["GEMINI_API_KEY"];
+const TRANSLATION_STATUS = {
+    TRANSLATED: "translated",
+    PENDING: "pending",
+    FAILED: "failed",
+};
+const MAX_HTML_BLOCKS_PER_CHUNK = 3;
+const MAX_CHARS_PER_TRANSLATION_CHUNK = 12000;
 
 let model;
-try {
-    model = genAI.getGenerativeModel({
-        model: MODEL_NAME,
-        // Set higher timeout for the model itself
-        requestOptions: { timeout: 300000 }
-    });
-    logger.info(`Gemini Model ${MODEL_NAME} initialized successfully.`);
-} catch (e) {
-    logger.error(`Error initializing Gemini model ${MODEL_NAME}:`, e);
-}
 
 setGlobalOptions({ maxInstances: 5, region: "us-central1" });
 
-/**
- * Translates text into Spain Spanish using Gemini
- */
-async function translateText(text) {
-    if (!text || (typeof text === 'string' && text.trim() === "")) return text || "";
+function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
-    const prompt = `Translate the following text into professional "Spain Spanish" (Español de España). 
-  Important rules:
-  1. Maintain a journalistic and sophisticated tone matching MIT Technology Review.
-  2. Preserve all HTML tags, attributes, and structure exactly as they are.
-  3. Do not translate technical terms if they are commonly used in English in the tech industry (e.g. "machine learning", "blockchain", "big data" unless there's a very standard Spanish equivalent).
-  4. Return ONLY the translated text, no conversational fillers or explanations.
+function getGeminiApiKey() {
+    return (process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY || "").trim();
+}
 
-  Text to translate:
-  ${text}`;
+function getModel() {
+    if (model) return model;
 
-    try {
-        logger.info(`[DEVOPS] Translating block with model: ${MODEL_NAME}`);
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        let translated = response.text().trim();
+    const apiKey = getGeminiApiKey();
+    if (!apiKey) {
+        throw new Error("GEMINI_API_KEY no configurada en Cloud Functions.");
+    }
 
-        // Strip markdown code blocks if present
-        if (translated.startsWith('```')) {
-            translated = translated.replace(/^```[a-z]*\n/i, '').replace(/\n```$/m, '').trim();
+    const genAI = new GoogleGenerativeAI(apiKey);
+    model = genAI.getGenerativeModel({
+        model: MODEL_NAME,
+        requestOptions: { timeout: 300000 }
+    });
+
+    logger.info(`Gemini Model ${MODEL_NAME} initialized successfully.`);
+    return model;
+}
+
+function stripCodeFences(text) {
+    let cleaned = (text || "").trim();
+    if (cleaned.startsWith("```")) {
+        cleaned = cleaned.replace(/^```[a-z]*\n/i, "").replace(/\n```$/m, "").trim();
+    }
+    return cleaned;
+}
+
+function isRetryableGeminiError(error) {
+    const message = `${error?.message || error}`.toLowerCase();
+    return [
+        "429",
+        "500",
+        "503",
+        "deadline",
+        "timeout",
+        "resource exhausted",
+        "quota",
+        "unavailable",
+        "internal"
+    ].some((pattern) => message.includes(pattern));
+}
+
+async function callGemini(prompt, label, maxAttempts = 3) {
+    let lastError;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+            logger.info(`Gemini request started (${label})`, { attempt, model: MODEL_NAME });
+            const result = await getModel().generateContent(prompt);
+            const response = await result.response;
+            return stripCodeFences(response.text());
+        } catch (error) {
+            lastError = error;
+            logger.error(`Gemini request failed (${label})`, {
+                attempt,
+                message: error?.message || String(error),
+            });
+
+            if (attempt === maxAttempts || !isRetryableGeminiError(error)) {
+                break;
+            }
+
+            await sleep(Math.min(10000, 1000 * (2 ** (attempt - 1))));
+        }
+    }
+
+    throw lastError;
+}
+
+function escapeRegExp(value) {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function normalizeForComparison(text) {
+    return String(text || "")
+        .replace(/<[^>]*>?/gm, " ")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
+}
+
+function isMeaningfullyTranslated(original, translated) {
+    const originalNormalized = normalizeForComparison(original);
+    const translatedNormalized = normalizeForComparison(translated);
+
+    if (!originalNormalized) return true;
+    if (!translatedNormalized) return false;
+
+    return originalNormalized !== translatedNormalized;
+}
+
+function makeMarker(label, side) {
+    return `__${side}_${label}__`;
+}
+
+async function translateStructuredParts(parts, contextLabel) {
+    const partsToTranslate = parts.filter((part) => part.text && part.text.trim());
+    if (partsToTranslate.length === 0) return {};
+
+    const serializedParts = partsToTranslate
+        .map((part) => `${makeMarker(part.label, "START")}\n${part.text}\n${makeMarker(part.label, "END")}`)
+        .join("\n\n");
+
+    const prompt = `Translate each segment below into professional "Spain Spanish" (Español de España).
+Important rules:
+1. Preserve every HTML tag, attribute, URL and overall structure.
+2. Keep journalistic tone consistent with MIT Technology Review.
+3. Keep common English technical terms only when they are standard in Spanish tech coverage.
+4. Do not add explanations or commentary.
+5. Return every segment wrapped in exactly the same markers you received.
+
+SEGMENTS:
+${serializedParts}`;
+
+    const responseText = await callGemini(prompt, contextLabel);
+    const translations = {};
+
+    for (const part of partsToTranslate) {
+        const startMarker = makeMarker(part.label, "START");
+        const endMarker = makeMarker(part.label, "END");
+        const match = responseText.match(new RegExp(`${escapeRegExp(startMarker)}\\s*([\\s\\S]*?)\\s*${escapeRegExp(endMarker)}`));
+
+        if (!match) {
+            throw new Error(`No se pudo extraer la traduccion para ${part.label}.`);
         }
 
-        return translated;
-    } catch (error) {
-        logger.error("Gemini Translation error details:", error);
-        // If it fails, we fall back to the original text
-        return text || "";
+        translations[part.label] = match[1].trim();
     }
+
+    return translations;
+}
+
+function extractBodyBlocks(rawBody = []) {
+    const bodyBlocks = [];
+
+    if (!Array.isArray(rawBody)) return bodyBlocks;
+
+    rawBody.forEach((block, index) => {
+        if (block.type === "html" && block.data) {
+            bodyBlocks.push({ index, type: "html", original: block.data });
+        } else if (block.type === "image" && block.data && block.data.url) {
+            bodyBlocks.push({ index, type: "image", data: block.data });
+        }
+    });
+
+    return bodyBlocks;
+}
+
+function buildFigureHtml(data) {
+    return `<figure class="my-8"><img src="${data.url}" alt="${data.alt || ""}" class="w-full rounded-xl" /><figcaption class="text-xs text-center text-gray-500 mt-2">${data.caption || ""}</figcaption></figure>`;
+}
+
+function buildHtmlContent(bodyBlocks, translationsMap = {}) {
+    let fullHtmlContent = "";
+
+    bodyBlocks.forEach((block) => {
+        if (block.type === "html") {
+            fullHtmlContent += translationsMap[block.index] || block.original || "";
+        } else if (block.type === "image") {
+            fullHtmlContent += buildFigureHtml(block.data);
+        }
+    });
+
+    return fullHtmlContent.trim();
+}
+
+function chunkHtmlBlocks(bodyBlocks) {
+    const htmlBlocks = bodyBlocks.filter((block) => block.type === "html" && block.original);
+    const chunks = [];
+    let currentChunk = [];
+    let currentChars = 0;
+
+    htmlBlocks.forEach((block) => {
+        const nextChars = currentChars + block.original.length;
+        const shouldFlush =
+            currentChunk.length >= MAX_HTML_BLOCKS_PER_CHUNK ||
+            (currentChunk.length > 0 && nextChars > MAX_CHARS_PER_TRANSLATION_CHUNK);
+
+        if (shouldFlush) {
+            chunks.push(currentChunk);
+            currentChunk = [];
+            currentChars = 0;
+        }
+
+        currentChunk.push(block);
+        currentChars += block.original.length;
+    });
+
+    if (currentChunk.length > 0) {
+        chunks.push(currentChunk);
+    }
+
+    return chunks;
+}
+
+function resolveImageUrl(entry, bodyBlocks) {
+    let imageUrl = null;
+    const normalizeImageUrl = (url) => {
+        if (!url) return null;
+
+        try {
+            const parsedUrl = new URL(url);
+            parsedUrl.protocol = "https:";
+            return parsedUrl.toString();
+        } catch {
+            return url;
+        }
+    };
+
+    if (entry.topper && entry.topper.image && entry.topper.image.url) {
+        imageUrl = normalizeImageUrl(entry.topper.image.url);
+        logger.info(`Image found via topper: ${imageUrl}`);
+    }
+
+    if (!imageUrl && entry.images && Array.isArray(entry.images) && entry.images.length > 0) {
+        const candidates = entry.images.filter((img) => {
+            if (!img || !img.url) return false;
+            const url = img.url.toLowerCase();
+            if (url.includes("logo") || url.includes("icon") || url.includes("favicon")) return false;
+            if (img.width && img.height && img.width >= 400 && img.height >= 200) return true;
+            return true;
+        });
+
+        candidates.sort((a, b) => ((b.width || 0) * (b.height || 0)) - ((a.width || 0) * (a.height || 0)));
+
+        const best = candidates.find((img) => {
+            const w = img.width || 0;
+            const h = img.height || 0;
+            if (w > 0 && h > 0) {
+                return (w / h) >= 1.0;
+            }
+            return true;
+        }) || candidates[0];
+
+        if (best && best.url) {
+            imageUrl = normalizeImageUrl(best.url);
+            logger.info(`Image found via images array: ${imageUrl} (${best.width}x${best.height})`);
+        }
+    }
+
+    if (!imageUrl && entry.attachments && entry.attachments.thumbnail && entry.attachments.thumbnail.url) {
+        imageUrl = normalizeImageUrl(entry.attachments.thumbnail.url);
+        logger.info(`Image found via attachments: ${imageUrl}`);
+    }
+
+    if (!imageUrl) {
+        const bodyImage = bodyBlocks.find((block) => block.type === "image" && block.data && block.data.url);
+        if (bodyImage) {
+            imageUrl = normalizeImageUrl(bodyImage.data.url);
+            logger.info(`Image found via body content: ${imageUrl}`);
+        }
+    }
+
+    return imageUrl;
+}
+
+function sanitizeForFirestore(data) {
+    Object.keys(data).forEach((key) => {
+        if (data[key] === undefined) {
+            data[key] = null;
+        }
+    });
+
+    return data;
+}
+
+function buildTranslationMetadata(status, error = null) {
+    return {
+        status,
+        model: MODEL_NAME,
+        lastAttemptAt: admin.firestore.FieldValue.serverTimestamp(),
+        translatedAt: status === TRANSLATION_STATUS.TRANSLATED ? admin.firestore.FieldValue.serverTimestamp() : null,
+        error: error || null,
+    };
+}
+
+function serializeTranslationSource(title, excerpt, bodyBlocks) {
+    return {
+        title,
+        excerpt,
+        bodyBlocks: bodyBlocks.map((block) => {
+            if (block.type === "html") {
+                return {
+                    index: block.index,
+                    type: block.type,
+                    original: block.original,
+                };
+            }
+
+            return {
+                index: block.index,
+                type: block.type,
+                data: {
+                    url: block.data.url,
+                    alt: block.data.alt || "",
+                    caption: block.data.caption || "",
+                },
+            };
+        }),
+    };
+}
+
+async function translateArticleFields({ articleId, title, excerpt, bodyBlocks }) {
+    const metadataTranslations = await translateStructuredParts([
+        { label: "TITLE", text: title },
+        { label: "EXCERPT", text: excerpt },
+    ], `article:${articleId}:metadata`);
+
+    const translationsMap = {};
+    const htmlChunks = chunkHtmlBlocks(bodyBlocks);
+
+    for (let index = 0; index < htmlChunks.length; index++) {
+        const chunk = htmlChunks[index];
+        const chunkTranslations = await translateStructuredParts(
+            chunk.map((block) => ({
+                label: `BLOCK_${block.index}`,
+                text: block.original,
+            })),
+            `article:${articleId}:chunk:${index + 1}`
+        );
+
+        chunk.forEach((block) => {
+            translationsMap[block.index] = chunkTranslations[`BLOCK_${block.index}`];
+        });
+    }
+
+    const originalContent = buildHtmlContent(bodyBlocks);
+    const translatedContent = buildHtmlContent(bodyBlocks, translationsMap);
+    const translatedTitle = metadataTranslations.TITLE?.trim() || title;
+    const translatedExcerpt = metadataTranslations.EXCERPT?.trim() || excerpt;
+
+    if (!isMeaningfullyTranslated(
+        `${title}\n${excerpt}\n${originalContent}`,
+        `${translatedTitle}\n${translatedExcerpt}\n${translatedContent}`
+    )) {
+        throw new Error("Gemini devolvio el articulo sin traducir.");
+    }
+
+    return {
+        translatedTitle,
+        translatedExcerpt,
+        translatedContent: translatedContent || translatedExcerpt || excerpt || "",
+        originalContent,
+    };
 }
 
 /**
@@ -88,9 +404,7 @@ async function generateSocialPost(articleData) {
     `;
 
     try {
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        return response.text().trim();
+        return await callGemini(prompt, `social:${articleData.originalId || articleData.title}`);
     } catch (error) {
         logger.error("Error generating social post:", error);
         return articleData.excerpt || "";
@@ -109,143 +423,18 @@ async function processEntry(entry, logId, internalLogId) {
         await logToFirestore('sync', 'in_progress', `Traduciendo: ${entry.title}...`, { logId }, internalLogId);
     }
 
-    // MIT API specific keys: 'dek' is excerpt (deck), 'body' is content
     const rawExcerpt = (entry.dek || "").replace(/<[^>]*>?/gm, "").trim();
-    const rawBody = entry.body || [];
-
-    // Combine all text for batch translation to save API calls and time
-    // We'll use delimiters to separate parts and help Gemini maintain structure
-    let contentToTranslate = `TITLE: ${entry.title || "Sin título"}\n\nEXCERPT: ${rawExcerpt}\n\n`;
-
-    const bodyBlocks = [];
-    if (rawBody && Array.isArray(rawBody)) {
-        rawBody.forEach((block, index) => {
-            if (block.type === "html" && block.data) {
-                contentToTranslate += `BLOCK_${index}: ${block.data}\n\n`;
-                bodyBlocks.push({ index, type: 'html', original: block.data });
-            } else if (block.type === "image" && block.data && block.data.url) {
-                bodyBlocks.push({ index, type: 'image', data: block.data });
-            }
-        });
-    }
-
-    const prompt = `Translate the following article metadata and blocks into professional "Spain Spanish" (Español de España).
-    Rules:
-    1. Maintain journalistic and sophisticated tone.
-    2. Preserve all HTML tags and structure exactly.
-    3. Keep technical terms like "machine learning" if standard in English.
-    4. Return exactly the same format with labels (TITLE:, EXCERPT:, BLOCK_N:).
-
-    ARTICLE:
-    ${contentToTranslate}`;
-
-    let translatedTitle = entry.title || "Sin título";
-    let translatedExcerpt = rawExcerpt;
-    const translationsMap = {};
-
-    try {
-        logger.info(`[DEVOPS] Batch translating article: ${entry.title}`);
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const text = response.text();
-
-        // Parse translations
-        const titleMatch = text.match(/TITLE:\s*(.*)/i);
-        if (titleMatch) translatedTitle = titleMatch[1].trim();
-
-        const excerptMatch = text.match(/EXCERPT:\s*([\s\S]*?)(?=BLOCK_0:|$)/i);
-        if (excerptMatch) translatedExcerpt = excerptMatch[1].trim();
-
-        bodyBlocks.forEach(block => {
-            if (block.type === 'html') {
-                const blockMatch = text.match(new RegExp(`BLOCK_${block.index}:\\s*([\\s\\S]*?)(?=BLOCK_\\d+:|$)`, 'i'));
-                if (blockMatch) translationsMap[block.index] = blockMatch[1].trim();
-            }
-        });
-    } catch (error) {
-        logger.error("Batch Translation error:", error);
-    }
-
-    let fullHtmlContent = "";
-    bodyBlocks.forEach(block => {
-        if (block.type === "html") {
-            fullHtmlContent += (translationsMap[block.index] || block.original || "");
-        } else if (block.type === "image") {
-            fullHtmlContent += `<figure class="my-8"><img src="${block.data.url}" alt="${block.data.alt || ""}" class="w-full rounded-xl" /><figcaption class="text-xs text-center text-gray-500 mt-2">${block.data.caption || ""}</figcaption></figure>`;
-        }
-    });
+    const bodyBlocks = extractBodyBlocks(entry.body || []);
+    const originalContent = buildHtmlContent(bodyBlocks);
 
     const category = (entry.topics && entry.topics.length > 0) ? entry.topics[0].name : "General";
     const tags = entry.topics ? entry.topics.map(t => t.name) : [];
+    const imageUrl = resolveImageUrl(entry, bodyBlocks);
 
-    // Image Discovery logic - improved to find the actual article hero image
-    let imageUrl = null;
-
-    // 1. Try topper first (hero image, most reliable for article main image)
-    if (entry.topper && entry.topper.image && entry.topper.image.url) {
-        imageUrl = entry.topper.image.url.split('?')[0];
-        logger.info(`Image found via topper: ${imageUrl}`);
-    }
-
-    // 2. Try images array - find the best candidate (largest, non-logo image)
-    if (!imageUrl && entry.images && Array.isArray(entry.images) && entry.images.length > 0) {
-        // Filter out small images (logos, icons) and known logo patterns
-        const candidates = entry.images.filter(img => {
-            if (!img || !img.url) return false;
-            const url = img.url.toLowerCase();
-            // Skip logos, icons, and very small images
-            if (url.includes('logo') || url.includes('icon') || url.includes('favicon')) return false;
-            // Prefer images with reasonable dimensions (not thumbnails)
-            if (img.width && img.height && img.width >= 400 && img.height >= 200) return true;
-            // If no dimensions, include but deprioritize
-            return true;
-        });
-
-        // Sort by area (largest first) to get the best hero image
-        candidates.sort((a, b) => {
-            const areaA = (a.width || 0) * (a.height || 0);
-            const areaB = (b.width || 0) * (b.height || 0);
-            return areaB - areaA;
-        });
-
-        // Pick the largest image that looks like a hero/social card
-        const best = candidates.find(img => {
-            const w = img.width || 0;
-            const h = img.height || 0;
-            // Prefer landscape images (hero-style), skip very tall/portrait images (report covers)
-            if (w > 0 && h > 0) {
-                const ratio = w / h;
-                return ratio >= 1.0; // Landscape or square
-            }
-            return true;
-        }) || candidates[0];
-
-        if (best && best.url) {
-            // Strip WP resizing parameters to get full-resolution image
-            imageUrl = best.url.split('?')[0];
-            logger.info(`Image found via images array: ${imageUrl} (${best.width}x${best.height})`);
-        }
-    }
-
-    // 3. Fallback to attachments
-    if (!imageUrl && entry.attachments && entry.attachments.thumbnail && entry.attachments.thumbnail.url) {
-        imageUrl = entry.attachments.thumbnail.url.split('?')[0];
-        logger.info(`Image found via attachments: ${imageUrl}`);
-    }
-
-    // 4. Fallback: look for first image in body content
-    if (!imageUrl) {
-        const bodyImage = bodyBlocks.find(b => b.type === 'image' && b.data && b.data.url);
-        if (bodyImage) {
-            imageUrl = bodyImage.data.url.split('?')[0];
-            logger.info(`Image found via body content: ${imageUrl}`);
-        }
-    }
-
-    const articleData = {
-        title: translatedTitle || entry.title || "Sin título",
-        excerpt: translatedExcerpt || rawExcerpt || "",
-        content: fullHtmlContent.trim() || translatedExcerpt || rawExcerpt || "",
+    const baseArticleData = {
+        title: entry.title || "Sin título",
+        excerpt: rawExcerpt || "",
+        content: originalContent || rawExcerpt || "",
         category: category || "General",
         tags: tags || [],
         author: (entry.byline && entry.byline.length > 0) ? (entry.byline[0].text || "MIT Technology Review") : "MIT Technology Review",
@@ -253,34 +442,61 @@ async function processEntry(entry, logId, internalLogId) {
         publishedAt: entry.published ? admin.firestore.Timestamp.fromDate(new Date(entry.published)) : admin.firestore.FieldValue.serverTimestamp(),
         imageUrl: imageUrl || null,
         readingTime: `${entry.word_count ? Math.ceil(entry.word_count / 200) : 5} min`,
-        status: "published",
-        isFeaturedInHeader: true,
+        publicationStatus: "published",
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         migratedAt: admin.firestore.FieldValue.serverTimestamp(),
         originalId: originalId,
-        language: "es",
         source: "MIT TR US"
     };
 
-    // Generate social post
-    logger.info(`Generating social post for: ${articleData.title}`);
-    if (internalLogId) {
-        await logToFirestore('sync', 'in_progress', `Generando post social: ${articleData.title}...`, { logId }, internalLogId);
-    }
-    const linkedinPost = await generateSocialPost(articleData);
-    articleData.socialPosts = {
-        linkedin: linkedinPost,
-        generatedAt: new Date().toISOString()
-    };
+    try {
+        const translatedFields = await translateArticleFields({
+            articleId: originalId,
+            title: baseArticleData.title,
+            excerpt: rawExcerpt,
+            bodyBlocks,
+        });
 
-    // Sanitize to avoid Firestore undefined errors
-    Object.keys(articleData).forEach(key => {
-        if (articleData[key] === undefined) {
-            articleData[key] = null;
+        const articleData = sanitizeForFirestore({
+            ...baseArticleData,
+            title: translatedFields.translatedTitle || baseArticleData.title,
+            excerpt: translatedFields.translatedExcerpt || baseArticleData.excerpt,
+            content: translatedFields.translatedContent || baseArticleData.content,
+            status: baseArticleData.publicationStatus,
+            language: "es",
+            translation: buildTranslationMetadata(TRANSLATION_STATUS.TRANSLATED),
+        });
+
+        logger.info(`Generating social post for: ${articleData.title}`);
+        if (internalLogId) {
+            await logToFirestore("sync", "in_progress", `Generando post social: ${articleData.title}...`, { logId }, internalLogId);
         }
-    });
 
-    return articleData;
+        const linkedinPost = await generateSocialPost(articleData);
+        articleData.socialPosts = {
+            linkedin: linkedinPost,
+            generatedAt: new Date().toISOString()
+        };
+
+        return {
+            articleData: sanitizeForFirestore(articleData),
+            syncStatus: "success",
+        };
+    } catch (error) {
+        logger.error(`Translation failed for article ${originalId}:`, error);
+
+        return {
+            articleData: sanitizeForFirestore({
+                ...baseArticleData,
+                status: "draft",
+                language: "en",
+                translation: buildTranslationMetadata(TRANSLATION_STATUS.FAILED, error.message),
+                translationSource: serializeTranslationSource(baseArticleData.title, rawExcerpt, bodyBlocks),
+            }),
+            syncStatus: "pending_translation",
+            error: error.message,
+        };
+    }
 }
 
 async function logToFirestore(type, status, message, details = null, docId = null) {
@@ -306,18 +522,226 @@ async function logToFirestore(type, status, message, details = null, docId = nul
     }
 }
 
+function buildArticleDocId(title, fallbackId) {
+    const slug = String(title || "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)+/g, "");
+
+    return slug || `articulo-${fallbackId}`;
+}
+
+async function buildUniqueArticleSlug(title, fallbackId) {
+    const baseSlug = buildArticleDocId(title, fallbackId);
+    let uniqueSlug = baseSlug;
+    let counter = 1;
+
+    while (true) {
+        const existingDoc = await db.collection("articles").doc(uniqueSlug).get();
+        if (!existingDoc.exists) {
+            return uniqueSlug;
+        }
+
+        uniqueSlug = `${baseSlug}-${counter}`;
+        counter++;
+    }
+}
+
+function getPublicationStatus(data = {}) {
+    if (data.publicationStatus) return data.publicationStatus;
+    if (data.status && data.status !== "draft") return data.status;
+    return "published";
+}
+
+function isArticleFullyTranslated(data = {}) {
+    if (data.translation?.status === TRANSLATION_STATUS.TRANSLATED) {
+        return true;
+    }
+
+    if (data.translation?.status) {
+        return false;
+    }
+
+    if (data.source === "MIT TR US") {
+        return false;
+    }
+
+    return data.language === "es";
+}
+
+async function retryArticleTranslation(docSnap, logId, internalLogId) {
+    const data = docSnap.data() || {};
+    const translationSource = data.translationSource || {};
+    const sourceTitle = translationSource.title || data.title || "Sin título";
+    const sourceExcerpt = translationSource.excerpt || data.excerpt || "";
+    const sourceBlocks = Array.isArray(translationSource.bodyBlocks) && translationSource.bodyBlocks.length > 0
+        ? translationSource.bodyBlocks
+        : [{ index: 0, type: "html", original: data.content || "" }];
+
+    if (internalLogId) {
+        await logToFirestore("sync", "in_progress", `Reintentando traduccion: ${sourceTitle}...`, { logId, docId: docSnap.id }, internalLogId);
+    }
+
+    const translatedFields = await translateArticleFields({
+        articleId: data.originalId || docSnap.id,
+        title: sourceTitle,
+        excerpt: sourceExcerpt,
+        bodyBlocks: sourceBlocks,
+    });
+
+    const publicationStatus = getPublicationStatus(data);
+    const nextData = sanitizeForFirestore({
+        title: translatedFields.translatedTitle || sourceTitle,
+        excerpt: translatedFields.translatedExcerpt || sourceExcerpt,
+        content: translatedFields.translatedContent || data.content || sourceExcerpt || "",
+        status: publicationStatus,
+        publicationStatus,
+        language: "es",
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        translation: buildTranslationMetadata(TRANSLATION_STATUS.TRANSLATED),
+        translationSource: admin.firestore.FieldValue.delete(),
+    });
+
+    const linkedinPost = await generateSocialPost({
+        ...data,
+        ...nextData,
+        originalId: data.originalId || docSnap.id,
+    });
+
+    nextData.socialPosts = {
+        linkedin: linkedinPost,
+        generatedAt: new Date().toISOString()
+    };
+
+    await docSnap.ref.set(nextData, { merge: true });
+
+    return {
+        id: docSnap.id,
+        title: nextData.title,
+        status: "updated"
+    };
+}
+
+async function retryPendingTranslations(limit = 10) {
+    const logId = `retry_${Date.now()}`;
+    const internalLogId = await logToFirestore("sync", "in_progress", `Reintentando traducciones pendientes (limit=${limit})`, { logId });
+
+    try {
+        getModel();
+
+        const [pendingSnap, englishSnap] = await Promise.all([
+            db.collection("articles")
+                .where("translation.status", "in", [TRANSLATION_STATUS.PENDING, TRANSLATION_STATUS.FAILED])
+                .limit(limit)
+                .get(),
+            db.collection("articles")
+                .where("language", "==", "en")
+                .limit(limit)
+                .get(),
+        ]);
+
+        const docsById = new Map();
+        [...pendingSnap.docs, ...englishSnap.docs].forEach((doc) => {
+            const data = doc.data() || {};
+            if (data.source === "MIT TR US" || data.originalId) {
+                docsById.set(doc.id, doc);
+            }
+        });
+
+        const docsToRetry = Array.from(docsById.values()).slice(0, limit);
+
+        if (docsToRetry.length === 0) {
+            const msg = "No hay articulos pendientes de traduccion.";
+            await logToFirestore("sync", "success", msg, { logId, recoveredCount: 0 }, internalLogId);
+            return 0;
+        }
+
+        const processedArticles = [];
+        let recoveredCount = 0;
+        let failedCount = 0;
+
+        for (let index = 0; index < docsToRetry.length; index++) {
+            const docSnap = docsToRetry[index];
+            const data = docSnap.data() || {};
+
+            await logToFirestore("sync", "in_progress", `Reprocesando traduccion ${index + 1} de ${docsToRetry.length}...`, {
+                logId,
+                current: index + 1,
+                total: docsToRetry.length,
+                docId: docSnap.id,
+            }, internalLogId);
+
+            try {
+                const result = await retryArticleTranslation(docSnap, logId, internalLogId);
+                processedArticles.push(result);
+                recoveredCount++;
+            } catch (error) {
+                failedCount++;
+                logger.error(`Retry translation failed for article ${docSnap.id}:`, error);
+
+                await docSnap.ref.set({
+                    publicationStatus: getPublicationStatus(data),
+                    status: "draft",
+                    language: data.language || "en",
+                    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+                    translation: buildTranslationMetadata(TRANSLATION_STATUS.FAILED, error.message),
+                }, { merge: true });
+
+                processedArticles.push({
+                    id: docSnap.id,
+                    title: data.title || "Artículo sin título",
+                    status: "error",
+                    error: error.message,
+                });
+            }
+        }
+
+        const summaryStatus = failedCount > 0 ? "error" : "success";
+        const summaryMessage = failedCount > 0
+            ? `Reintento completado con incidencias: ${recoveredCount} articulos recuperados, ${failedCount} siguen pendientes.`
+            : `Reintento completado: ${recoveredCount} articulos traducidos correctamente.`;
+
+        await logToFirestore("sync", summaryStatus, summaryMessage, {
+            logId,
+            recoveredCount,
+            failedCount,
+            processedArticles,
+        }, internalLogId);
+
+        return recoveredCount;
+    } catch (error) {
+        logger.error("Retry pending translations error:", error);
+        await logToFirestore("sync", "error", `Error reintentando traducciones: ${error.message}`, {
+            logId,
+            stack: error.stack,
+        }, internalLogId);
+        throw error;
+    }
+}
+
 /**
  * Common logic to fetch, translate, and sync articles
  */
 async function performSync(limit = 5, offset = 0) {
-    const db = admin.firestore();
     let syncedCount = 0;
     const processedArticles = [];
     const logId = `sync_${Date.now()}`;
+    const counters = {
+        created: 0,
+        updated: 0,
+        translated: 0,
+        pendingTranslation: 0,
+        skipped: 0,
+        failed: 0,
+    };
 
-    const internalLogId = await logToFirestore('sync', 'in_progress', `Iniciando sincronización (limit=${limit}, offset=${offset})`, { logId });
+    const internalLogId = await logToFirestore("sync", "in_progress", `Iniciando sincronizacion (limit=${limit}, offset=${offset})`, { logId });
 
     try {
+        getModel();
+
         const apiUrl = `https://wp.technologyreview.com/wp-json/mittr/v1/entries?limit=${limit}&offset=${offset}&sort=recent`;
         logger.info(`Fetching articles from: ${apiUrl}`);
         const response = await axios.get(apiUrl);
@@ -326,58 +750,83 @@ async function performSync(limit = 5, offset = 0) {
         if (!entries || !Array.isArray(entries)) {
             const msg = "No se encontraron entradas en la respuesta de la API";
             logger.info(msg);
-            await logToFirestore('sync', 'success', msg, { logId, syncedCount: 0 }, internalLogId);
+            await logToFirestore("sync", "success", msg, { logId, syncedCount: 0 }, internalLogId);
             return 0;
         }
 
         for (const entry of entries) {
             const originalId = String(entry.id);
 
-            // Update progress in Firestore so the user sees something is happening
-            await logToFirestore('sync', 'in_progress', `Procesando artículo ${syncedCount + 1} de ${entries.length}...`, { logId, current: syncedCount + 1, total: entries.length }, internalLogId);
+            await logToFirestore("sync", "in_progress", `Procesando articulo ${syncedCount + 1} de ${entries.length}...`, {
+                logId,
+                current: syncedCount + 1,
+                total: entries.length,
+            }, internalLogId);
 
             try {
-                const existing = await db.collection("articles").where("originalId", "==", originalId).get();
-                if (!existing.empty) {
-                    logger.info(`Article already exists, skipping: ${entry.title || originalId}`);
+                const existingSnapshot = await db.collection("articles")
+                    .where("originalId", "==", originalId)
+                    .limit(1)
+                    .get();
+                const existingDoc = existingSnapshot.docs[0] || null;
+                const existingData = existingDoc?.data() || null;
+
+                if (existingDoc && isArticleFullyTranslated(existingData)) {
+                    logger.info(`Article already translated, skipping: ${entry.title || originalId}`);
                     processedArticles.push({
-                        id: originalId,
-                        title: entry.title || "Artículo sin título",
-                        status: 'skipped'
+                        id: existingDoc.id,
+                        title: existingData.title || entry.title || "Artículo sin título",
+                        status: "skipped"
                     });
+                    counters.skipped++;
                     syncedCount++;
                     continue;
                 }
 
-                const articleData = await processEntry(entry, logId, internalLogId);
+                const result = await processEntry(entry, logId, internalLogId);
+                const articleDataToSave = {
+                    ...result.articleData,
+                    isFeaturedInHeader: existingData?.isFeaturedInHeader === true || existingData?.status === "featured",
+                };
 
-                // Generate a slug from the title for the document ID
-                let slug = articleData.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
-                // Check for collision
-                let uniqueSlug = slug;
-                let counter = 1;
-                let existingDoc = await db.collection("articles").doc(uniqueSlug).get();
-                while (existingDoc.exists) {
-                    uniqueSlug = `${slug}-${counter}`;
-                    counter++;
-                    existingDoc = await db.collection("articles").doc(uniqueSlug).get();
+                let articleId = existingDoc?.id || null;
+                if (existingDoc) {
+                    logger.info(`Updating existing article: ${articleId}`);
+                    await existingDoc.ref.set(articleDataToSave, { merge: true });
+                } else {
+                    articleId = await buildUniqueArticleSlug(articleDataToSave.title, originalId);
+                    logger.info(`Creating new article: ${articleDataToSave.title} with slug: ${articleId}`);
+                    await db.collection("articles").doc(articleId).set(articleDataToSave);
+                    counters.created++;
                 }
 
-                logger.info(`Creating new article: ${articleData.title} with slug: ${uniqueSlug}`);
-                // Use set() with the unique slug instead of add()
-                await db.collection("articles").doc(uniqueSlug).set(articleData);
+                if (existingDoc) {
+                    counters.updated++;
+                }
 
-                processedArticles.push({
-                    id: uniqueSlug, // Use the generated slug as the ID
-                    title: articleData.title,
-                    status: 'success'
-                });
+                if (result.syncStatus === "pending_translation") {
+                    counters.pendingTranslation++;
+                    processedArticles.push({
+                        id: articleId,
+                        title: articleDataToSave.title,
+                        status: "pending_translation",
+                        error: result.error,
+                    });
+                } else {
+                    counters.translated++;
+                    processedArticles.push({
+                        id: articleId,
+                        title: articleDataToSave.title,
+                        status: existingDoc ? "updated" : "success",
+                    });
+                }
             } catch (articleError) {
+                counters.failed++;
                 logger.error(`Error processing article ${originalId}:`, articleError);
                 processedArticles.push({
                     id: originalId,
                     title: entry.title || "Artículo sin título",
-                    status: 'error',
+                    status: "error",
                     error: articleError.message
                 });
             }
@@ -385,15 +834,23 @@ async function performSync(limit = 5, offset = 0) {
             syncedCount++;
         }
 
-        await logToFirestore('sync', 'success', `Sincronización completada: ${syncedCount} artículos procesados.`, {
+        const hasIssues = counters.pendingTranslation > 0 || counters.failed > 0;
+        const summaryStatus = hasIssues ? "error" : "success";
+        const summaryMessage = hasIssues
+            ? `Sincronizacion completada con incidencias: ${counters.translated} traducidos, ${counters.pendingTranslation} pendientes, ${counters.failed} con error y ${counters.skipped} omitidos.`
+            : `Sincronizacion completada: ${counters.translated} articulos traducidos (${counters.created} nuevos, ${counters.updated} actualizados).`;
+
+        await logToFirestore("sync", summaryStatus, summaryMessage, {
             logId,
             syncedCount,
-            processedArticles // Store the list for the UI to display
+            counters,
+            processedArticles,
         }, internalLogId);
+
         return syncedCount;
     } catch (error) {
         logger.error("Sync error:", error);
-        await logToFirestore('sync', 'error', `Error en la sincronización: ${error.message}`, { logId, stack: error.stack }, internalLogId);
+        await logToFirestore("sync", "error", `Error en la sincronizacion: ${error.message}`, { logId, stack: error.stack }, internalLogId);
         throw error;
     }
 }
@@ -404,8 +861,17 @@ async function performSync(limit = 5, offset = 0) {
 exports.syncMITArticles = onSchedule({
     schedule: "0 8 * * *",
     timeZone: "Europe/Madrid",
-}, async (event) => {
+    secrets: TRANSLATION_SECRET_NAMES,
+}, async () => {
     await performSync();
+});
+
+exports.retryPendingArticleTranslations = onSchedule({
+    schedule: "15 8-20 * * *",
+    timeZone: "Europe/Madrid",
+    secrets: TRANSLATION_SECRET_NAMES,
+}, async () => {
+    await retryPendingTranslations();
 });
 
 /**
@@ -415,7 +881,8 @@ exports.syncMITArticles = onSchedule({
 exports.manualSync = onCall({
     timeoutSeconds: 1200,
     maxInstances: 1,
-    memory: "1GiB"
+    memory: "1GiB",
+    secrets: TRANSLATION_SECRET_NAMES,
 }, async (request) => {
     try {
         const limit = parseInt(request.data.limit) || 5;
@@ -432,6 +899,22 @@ exports.manualSync = onCall({
             throw new Error("El proceso excedió el tiempo límite (9 min). Intenta sincronizar menos artículos a la vez.");
         }
         throw new Error(errorMsg);
+    }
+});
+
+exports.retryTranslationsNow = onCall({
+    timeoutSeconds: 1200,
+    maxInstances: 1,
+    memory: "1GiB",
+    secrets: TRANSLATION_SECRET_NAMES,
+}, async (request) => {
+    try {
+        const limit = parseInt(request.data.limit) || 10;
+        const count = await retryPendingTranslations(limit);
+        return { success: true, count, message: `Reintento finalizado. ${count} articulos recuperados.` };
+    } catch (error) {
+        logger.error("Manual retry translations error", error);
+        throw new Error(error.toString());
     }
 });
 

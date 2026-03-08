@@ -1,7 +1,7 @@
 import { db } from "@/lib/firebase-admin";
 import ArticleCard from "@/components/home/ArticleCard";
 import { notFound } from "next/navigation";
-import Image from "next/image";
+import SiteImage from "@/components/SiteImage";
 import ViewTracker from "@/components/ViewTracker";
 
 export const dynamic = "force-dynamic";
@@ -67,7 +67,7 @@ export default async function InformePage({ params }: InformePageProps) {
             <ViewTracker collectionName="informes" documentId={informeSnapshot.docs[0].id} />
             {/* Hero Section */}
             <div className="relative h-[60vh] min-h-[400px] w-full overflow-hidden bg-primary">
-                <Image
+                <SiteImage
                     src={informeData.imageUrl || "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&q=80&w=1600"}
                     alt={informeData.title}
                     fill

@@ -1,6 +1,6 @@
 import { db } from "@/lib/firebase-admin";
 import { notFound } from "next/navigation";
-import Image from "next/image";
+import SiteImage from "@/components/SiteImage";
 import { cleanContent } from "@/lib/content-utils";
 import DOMPurify from "isomorphic-dompurify";
 
@@ -36,7 +36,7 @@ export default async function StaticPage({ params }: PageProps) {
             {/* Hero Section */}
             {pageData.headerImageUrl ? (
                 <div className="relative h-[60vh] w-full">
-                    <Image
+                    <SiteImage
                         src={pageData.headerImageUrl}
                         alt={pageData.title}
                         fill

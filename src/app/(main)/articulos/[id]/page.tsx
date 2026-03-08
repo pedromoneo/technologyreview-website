@@ -1,6 +1,6 @@
 import { db } from "@/lib/firebase-admin";
 import { notFound } from "next/navigation";
-import Image from "next/image";
+import SiteImage from "@/components/SiteImage";
 import Link from "next/link";
 import { Clock, User, Share2, Facebook, Twitter, Linkedin, ArrowLeft } from "lucide-react";
 import { cleanContent, cleanExcerpt, truncateToSentence } from "@/lib/content-utils";
@@ -133,7 +133,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
                     {/* Main Content */}
                     <div className="flex-1 max-w-3xl">
                         <div className="relative aspect-[16/9] mb-12 overflow-hidden group">
-                            <Image
+                            <SiteImage
                                 src={article.imageUrl}
                                 alt={article.title}
                                 fill
@@ -236,7 +236,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
                                 {relatedArticles.map((ra) => (
                                     <Link key={ra.id} href={`/articulos/${ra.id}`} className="group block">
                                         <div className="relative aspect-video mb-4 overflow-hidden">
-                                            <Image
+                                            <SiteImage
                                                 src={ra.imageUrl}
                                                 alt={ra.title}
                                                 fill

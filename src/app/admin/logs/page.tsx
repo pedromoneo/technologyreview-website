@@ -34,6 +34,7 @@ export default function LogsPage() {
     const [logs, setLogs] = useState<ApiLog[]>([]);
     const [loading, setLoading] = useState(true);
     const [syncing, setSyncing] = useState(false);
+    const [retryingTranslations, setRetryingTranslations] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
 
@@ -77,6 +78,23 @@ export default function LogsPage() {
         }
     };
 
+    const handleRetryTranslations = async () => {
+        if (retryingTranslations) return;
+        setRetryingTranslations(true);
+        setError(null);
+        try {
+            const retryTranslations = httpsCallable(functions, "retryTranslationsNow", {
+                timeout: 1200000
+            });
+            await retryTranslations({ limit: 10 });
+        } catch (err: any) {
+            console.error("Retry translations error:", err);
+            setError(err.message || "Error al reintentar las traducciones pendientes");
+        } finally {
+            setRetryingTranslations(false);
+        }
+    };
+
     const StatusBadge = ({ status }: { status: ApiLog['status'] }) => {
         switch (status) {
             case 'success':
@@ -102,6 +120,41 @@ export default function LogsPage() {
         }
     };
 
+    const getProcessedArticleStatusMeta = (status: string) => {
+        switch (status) {
+            case "success":
+                return {
+                    dotClass: "bg-green-500",
+                    badgeClass: "bg-green-50 text-green-700",
+                    label: "Traducido",
+                };
+            case "updated":
+                return {
+                    dotClass: "bg-blue-500",
+                    badgeClass: "bg-blue-50 text-blue-700",
+                    label: "Actualizado",
+                };
+            case "pending_translation":
+                return {
+                    dotClass: "bg-amber-500",
+                    badgeClass: "bg-amber-50 text-amber-700",
+                    label: "Pendiente",
+                };
+            case "skipped":
+                return {
+                    dotClass: "bg-gray-300",
+                    badgeClass: "bg-gray-100 text-gray-500",
+                    label: "Omitido",
+                };
+            default:
+                return {
+                    dotClass: "bg-red-500",
+                    badgeClass: "bg-red-50 text-red-700",
+                    label: "Error",
+                };
+        }
+    };
+
     return (
         <div className="p-8 max-w-7xl mx-auto">
             {/* Header section */}
@@ -120,14 +173,24 @@ export default function LogsPage() {
                     </p>
                 </div>
 
-                <button
-                    onClick={handleSyncNow}
-                    disabled={syncing}
-                    className="flex items-center justify-center space-x-3 px-8 py-4 bg-primary text-white rounded-xl font-black uppercase tracking-widest text-sm hover:bg-black transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-xl active:scale-95"
-                >
-                    <RefreshCcw className={`w-5 h-5 ${syncing ? 'animate-spin' : ''}`} />
-                    <span>{syncing ? 'Sincronizar Ahora' : 'Sincronizar Ahora'}</span>
-                </button>
+                <div className="flex flex-col sm:flex-row gap-3">
+                    <button
+                        onClick={handleRetryTranslations}
+                        disabled={retryingTranslations}
+                        className="flex items-center justify-center space-x-3 px-6 py-4 border border-gray-200 text-primary rounded-xl font-black uppercase tracking-widest text-sm hover:bg-gray-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
+                    >
+                        <RefreshCcw className={`w-5 h-5 ${retryingTranslations ? 'animate-spin' : ''}`} />
+                        <span>{retryingTranslations ? 'Reintentando' : 'Reintentar Traducciones'}</span>
+                    </button>
+                    <button
+                        onClick={handleSyncNow}
+                        disabled={syncing}
+                        className="flex items-center justify-center space-x-3 px-8 py-4 bg-primary text-white rounded-xl font-black uppercase tracking-widest text-sm hover:bg-black transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-xl active:scale-95"
+                    >
+                        <RefreshCcw className={`w-5 h-5 ${syncing ? 'animate-spin' : ''}`} />
+                        <span>{syncing ? 'Sincronizando' : 'Sincronizar Ahora'}</span>
+                    </button>
+                </div>
             </div>
 
             {error && (
@@ -216,17 +279,22 @@ export default function LogsPage() {
                                                         </h4>
                                                         <div className="grid grid-cols-1 gap-2">
                                                             {log.details.processedArticles.map((article: any, idx: number) => (
-                                                                <div key={idx} className="flex items-center justify-between p-3 bg-white rounded-xl border border-gray-100 shadow-sm">
+                                                                <div key={idx} className="flex items-center justify-between gap-4 p-3 bg-white rounded-xl border border-gray-100 shadow-sm">
                                                                     <div className="flex items-center space-x-3">
-                                                                        <div className={`w-2 h-2 rounded-full ${article.status === 'success' ? 'bg-green-500' : 'bg-red-500'}`} />
+                                                                        <div className={`w-2 h-2 rounded-full ${getProcessedArticleStatusMeta(article.status).dotClass}`} />
                                                                         <span className="text-xs font-bold text-gray-800">{article.title}</span>
                                                                         <span className="text-[10px] text-gray-400 font-medium font-mono">ID: {article.id}</span>
                                                                     </div>
-                                                                    {article.error && (
-                                                                        <span className="text-[10px] text-red-500 font-bold uppercase tracking-tighter max-w-xs truncate">
-                                                                            {article.error}
+                                                                    <div className="flex items-center gap-3">
+                                                                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${getProcessedArticleStatusMeta(article.status).badgeClass}`}>
+                                                                            {getProcessedArticleStatusMeta(article.status).label}
                                                                         </span>
-                                                                    )}
+                                                                        {article.error && (
+                                                                            <span className="text-[10px] text-red-500 font-bold uppercase tracking-tighter max-w-xs truncate">
+                                                                                {article.error}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
                                                                 </div>
                                                             ))}
                                                         </div>
@@ -244,4 +312,3 @@ export default function LogsPage() {
         </div>
     );
 }
-

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { db, storage } from "@/lib/firebase";
-import { collection, addDoc, updateDoc, doc, getDoc, setDoc, serverTimestamp, Timestamp } from "firebase/firestore";
+import { collection, updateDoc, doc, getDoc, getDocs, query, setDoc, serverTimestamp, where, writeBatch } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { ArrowLeft, Save, Image as ImageIcon, Tag, Layout, Type, User, Calendar, Clock, Upload, Loader2, X } from "lucide-react";
 import Image from "next/image";
@@ -92,6 +92,32 @@ export default function PostEditor({ postId }: PostEditorProps) {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
+    const clearFeaturedOnOtherArticles = async (targetId: string) => {
+        const featuredSnap = await getDocs(query(
+            collection(db, "articles"),
+            where("isFeaturedInHeader", "==", true)
+        ));
+
+        if (featuredSnap.empty) return;
+
+        const batch = writeBatch(db);
+        let hasUpdates = false;
+
+        featuredSnap.docs.forEach((articleDoc) => {
+            if (articleDoc.id === targetId) return;
+
+            batch.update(articleDoc.ref, {
+                isFeaturedInHeader: false,
+                updatedAt: serverTimestamp(),
+            });
+            hasUpdates = true;
+        });
+
+        if (hasUpdates) {
+            await batch.commit();
+        }
+    };
+
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -124,6 +150,8 @@ export default function PostEditor({ postId }: PostEditorProps) {
         };
 
         try {
+            let targetId = postId;
+
             if (postId) {
                 await updateDoc(doc(db, "articles", postId), postData);
             } else {
@@ -142,7 +170,13 @@ export default function PostEditor({ postId }: PostEditorProps) {
                 }
 
                 await setDoc(doc(db, "articles", uniqueSlug), postData);
+                targetId = uniqueSlug;
             }
+
+            if (postData.isFeaturedInHeader === true && targetId) {
+                await clearFeaturedOnOtherArticles(targetId);
+            }
+
             router.push("/admin/posts");
         } catch (error) {
             console.error("Error saving post:", error);
@@ -178,7 +212,7 @@ export default function PostEditor({ postId }: PostEditorProps) {
                         </div>
                         <div>
                             <p className="text-[10px] font-black uppercase tracking-widest">Destacado en Cabecera</p>
-                            <p className="text-[9px] font-bold text-primary/60 uppercase tracking-widest">Este artículo aparecerá en la posición principal de la home.</p>
+                            <p className="text-[9px] font-bold text-primary/60 uppercase tracking-widest">Este artículo ocupará la posición principal de la home y quitará esa posición al resto.</p>
                         </div>
                     </div>
                     <button

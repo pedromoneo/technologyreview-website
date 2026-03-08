@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Image from "next/image";
+import SiteImage from "@/components/SiteImage";
 import { Article } from "@/data/mock-articles";
 import { cleanExcerpt, truncateToSentence } from "@/lib/content-utils";
 
@@ -16,7 +16,7 @@ export default function ArticleCard({ article, featured = false }: ArticleCardPr
             <Link href={`/articulos/${article.id}`} className="group relative overflow-hidden bg-primary text-white flex flex-col md:flex-row min-h-[500px] hover:bg-black transition-colors">
                 {/* Image Container */}
                 <div className="relative w-full md:w-1/2 h-80 md:h-[600px] overflow-hidden">
-                    <Image
+                    <SiteImage
                         src={article.imageUrl}
                         alt={article.title}
                         fill
@@ -49,7 +49,7 @@ export default function ArticleCard({ article, featured = false }: ArticleCardPr
     return (
         <Link href={`/articulos/${article.id}`} className="group block">
             <div className="relative aspect-[16/10] mb-8 overflow-hidden bg-gray-100">
-                <Image
+                <SiteImage
                     src={article.imageUrl}
                     alt={article.title}
                     fill

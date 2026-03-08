@@ -5,13 +5,22 @@ import { Search, User, X, ChevronDown, Menu, ShieldCheck, LogOut } from "lucide-
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { db } from "@/lib/firebase";
-import { doc, getDoc, collection, getDocs, query, where, limit } from "firebase/firestore";
 import { slugify } from "@/lib/content-utils";
 
 import { useAuth } from "@/lib/auth-context";
 
-export default function Navbar() {
+interface FeaturedInforme {
+    id: string;
+    slug: string;
+    title: string;
+}
+
+interface NavbarProps {
+    topics: string[];
+    featuredInformes: FeaturedInforme[];
+}
+
+export default function Navbar({ topics, featuredInformes }: NavbarProps) {
     const { user, isAdmin, logout } = useAuth();
     const [isScrolled, setIsScrolled] = useState(false);
     const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -20,10 +29,7 @@ export default function Navbar() {
     const router = useRouter();
 
     // ... rest of state
-
-    const [topics, setTopics] = useState<string[]>([]);
     const [isTemasOpen, setIsTemasOpen] = useState(false);
-    const [featuredInformes, setFeaturedInformes] = useState<any[]>([]);
     const [isInformesOpen, setIsInformesOpen] = useState(false);
 
     const handleSearch = (e: React.FormEvent) => {
@@ -40,42 +46,6 @@ export default function Navbar() {
             setIsScrolled(window.scrollY > 20);
         };
         window.addEventListener("scroll", handleScroll);
-
-        // Fetch categories from settings
-        const fetchCategories = async () => {
-            try {
-                const docRef = doc(db, "settings", "categories");
-                const docSnap = await getDoc(docRef);
-                if (docSnap.exists()) {
-                    setTopics(docSnap.data().list || []);
-                } else {
-                    setTopics(["Inteligencia Artificial", "Biotecnología", "Energía", "Espacio", "Sostenibilidad", "Negocios"]);
-                }
-            } catch (error) {
-                console.error("Error fetching categories for navbar:", error);
-            }
-        };
-        fetchCategories();
-
-        // Fetch featured informes
-        const fetchFeaturedInformes = async () => {
-            try {
-                const q = query(
-                    collection(db, "informes"),
-                    where("status", "==", "featured"),
-                    limit(2)
-                );
-                const snapshot = await getDocs(q);
-                const fetched = snapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                }));
-                setFeaturedInformes(fetched);
-            } catch (error) {
-                console.error("Error fetching featured informes for navbar:", error);
-            }
-        };
-        fetchFeaturedInformes();
 
         return () => window.removeEventListener("scroll", handleScroll);
     }, []);

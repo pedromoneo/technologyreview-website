@@ -1,11 +1,9 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-import Image from "next/image";
+import { useState, useRef } from "react";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { db } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import SiteImage from "@/components/SiteImage";
 
 interface Article {
     id: string;
@@ -22,48 +20,17 @@ interface CollectionData {
     title: string;
     subtitle: string;
     color: string;
-    articleIds: string[];
+    articleIds?: string[];
 }
 
 interface ArticleCollectionProps {
-    collectionId: string;
+    collection: CollectionData;
+    articles: Article[];
 }
 
-export default function ArticleCollection({ collectionId }: ArticleCollectionProps) {
-    const [collection, setCollection] = useState<CollectionData | null>(null);
-    const [articles, setArticles] = useState<Article[]>([]);
-    const [loading, setLoading] = useState(true);
+export default function ArticleCollection({ collection, articles }: ArticleCollectionProps) {
     const [scrollPosition, setScrollPosition] = useState(0);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        const fetchCollectionData = async () => {
-            try {
-                const collectionDoc = await getDoc(doc(db, "collections", collectionId));
-                if (collectionDoc.exists()) {
-                    const data = collectionDoc.data() as CollectionData;
-                    setCollection({ ...data, id: collectionDoc.id });
-
-                    if (data.articleIds && data.articleIds.length > 0) {
-                        const fetchedArticles: Article[] = [];
-                        for (const id of data.articleIds) {
-                            const artDoc = await getDoc(doc(db, "articles", id));
-                            if (artDoc.exists()) {
-                                fetchedArticles.push({ id: artDoc.id, ...artDoc.data() } as Article);
-                            }
-                        }
-                        setArticles(fetchedArticles);
-                    }
-                }
-            } catch (error) {
-                console.error("Error fetching collection data:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchCollectionData();
-    }, [collectionId]);
 
     const scroll = (direction: 'left' | 'right') => {
         if (!scrollContainerRef.current) return;
@@ -86,7 +53,7 @@ export default function ArticleCollection({ collectionId }: ArticleCollectionPro
         }
     };
 
-    if (loading || !collection || articles.length === 0) return null;
+    if (!collection || articles.length === 0) return null;
 
     return (
         <section className="bg-gray-50 py-16 md:py-24 overflow-hidden border-y border-gray-100 w-full max-w-full">
@@ -156,10 +123,11 @@ export default function ArticleCollection({ collectionId }: ArticleCollectionPro
                         </div>
 
                         <div className="relative aspect-[16/10] overflow-hidden">
-                            <Image
-                                src={article.imageUrl}
+                            <SiteImage
+                                src={article.imageUrl || "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&q=80&w=800"}
                                 alt={article.title}
                                 fill
+                                loading="lazy"
                                 className="object-cover transition-transform duration-700 group-hover:scale-110"
                                 sizes="(max-width: 768px) 280px, 380px"
                             />

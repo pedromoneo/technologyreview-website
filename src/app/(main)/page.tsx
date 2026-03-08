@@ -5,10 +5,16 @@ import { ArrowRight } from "lucide-react";
 import { db } from "@/lib/firebase-admin";
 import { slugify } from "@/lib/content-utils";
 import LoadMoreStories from "@/components/home/LoadMoreStories";
+import { unstable_noStore as noStore } from "next/cache";
 
-export const revalidate = 600; // 10 minutes cache
+export const dynamic = "force-dynamic";
+
+const DEFAULT_TOPICS = ["Inteligencia Artificial", "Biotecnología", "Energía", "Espacio", "Sostenibilidad", "Negocios"];
+const DEFAULT_ARTICLE_IMAGE = "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&q=80&w=800";
 
 export default async function Home() {
+  noStore();
+
   if (!db) {
     console.error("Database not initialized");
     return (
@@ -19,24 +25,18 @@ export default async function Home() {
   }
 
   // Run all Firestore queries in parallel for faster page load
-  const [featuredSnap, latestSnap, categoriesSnap, collectionsSnap, featuredInformesSnap] = await Promise.all([
-    // 1. Featured post
-    db.collection("articles")
-      .where("status", "in", ["published", "featured"])
-      .where("isFeaturedInHeader", "==", true)
-      .limit(1)
-      .get(),
-    // 2. Latest posts
+  const [latestSnap, categoriesSnap, collectionsSnap, featuredInformesSnap] = await Promise.all([
+    // 1. Latest posts
     db.collection("articles")
       .where("status", "in", ["published", "featured"])
       .orderBy("publishedAt", "desc")
       .limit(21)
       .get(),
-    // 3. Categories
+    // 2. Categories
     db.collection("settings").doc("categories").get(),
-    // 4. Collections
+    // 3. Collections
     db.collection("collections").orderBy("createdAt", "desc").get(),
-    // 5. Featured Informes
+    // 4. Featured Informes
     db.collection("informes")
       .where("status", "==", "featured")
       .limit(5)
@@ -44,7 +44,8 @@ export default async function Home() {
   ]);
 
   const allFetched = latestSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  let featuredData = featuredSnap.docs.length > 0 ? { id: featuredSnap.docs[0].id, ...featuredSnap.docs[0].data() } : null;
+  const featuredCandidates = allFetched.filter((article: any) => article.isFeaturedInHeader === true);
+  let featuredData = featuredCandidates[0] || null;
 
   // Map to common structure
   const mapArticle = (data: any) => ({
@@ -55,10 +56,10 @@ export default async function Home() {
     author: data.author || "Redacción",
     date: data.date || "",
     readingTime: data.readingTime || "1 min",
-    imageUrl: data.imageUrl || "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&q=80&w=800",
+    imageUrl: data.imageUrl || DEFAULT_ARTICLE_IMAGE,
   });
 
-  // If no manual featured, pick the first from latest
+  // If no article is explicitly in portada, fall back to the latest story.
   if (!featuredData && allFetched.length > 0) {
     featuredData = allFetched[0];
   }
@@ -80,12 +81,40 @@ export default async function Home() {
   const next8 = latestArticles.slice(4, 12);
   const remaining = latestArticles.slice(12);
 
-  const sideTopics = categoriesSnap.exists ? (categoriesSnap.data()?.list || []) : ["Inteligencia Artificial", "Biotecnología", "Energía", "Espacio", "Sostenibilidad", "Negocios"];
+  const sideTopics = categoriesSnap.exists ? (categoriesSnap.data()?.list || []) : DEFAULT_TOPICS;
 
-  const allCollections = collectionsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  const pos1Collections = allCollections.filter((c: any) => c.insertionPoint === 'pos1');
-  const pos2Collections = allCollections.filter((c: any) => c.insertionPoint === 'pos2');
-  const footerCollections = allCollections.filter((c: any) => c.insertionPoint === 'footer' || !c.insertionPoint);
+  const allCollections = collectionsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
+  const uniqueCollectionArticleIds = Array.from(
+    new Set(
+      allCollections.flatMap((collection: any) => Array.isArray(collection.articleIds) ? collection.articleIds : [])
+    )
+  );
+
+  const collectionArticleSnapshots = uniqueCollectionArticleIds.length > 0
+    ? await db.getAll(...uniqueCollectionArticleIds.map((id) => db.collection("articles").doc(id)))
+    : [];
+
+  const collectionArticlesById = new Map(
+    collectionArticleSnapshots
+      .filter((doc) => doc.exists)
+      .map((doc) => [doc.id, mapArticle({ id: doc.id, ...doc.data() })])
+  );
+
+  const hydratedCollections = allCollections.map((collection: any) => ({
+    id: collection.id,
+    insertionPoint: collection.insertionPoint || null,
+    sectionTitle: collection.sectionTitle || "",
+    title: collection.title || "",
+    subtitle: collection.subtitle || "",
+    color: collection.color || "#111111",
+    articles: (collection.articleIds || [])
+      .map((id: string) => collectionArticlesById.get(id))
+      .filter(Boolean)
+  }));
+
+  const pos1Collections = hydratedCollections.filter((c: any) => c.insertionPoint === 'pos1');
+  const pos2Collections = hydratedCollections.filter((c: any) => c.insertionPoint === 'pos2');
+  const footerCollections = hydratedCollections.filter((c: any) => c.insertionPoint === 'footer' || !c.insertionPoint);
 
   const featuredInformes = featuredInformesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
@@ -169,7 +198,7 @@ export default async function Home() {
             {pos1Collections.length > 0 && (
               <div className="my-24">
                 {pos1Collections.map(coll => (
-                  <ArticleCollection key={coll.id} collectionId={coll.id} />
+                  <ArticleCollection key={coll.id} collection={coll} articles={coll.articles} />
                 ))}
               </div>
             )}
@@ -185,7 +214,7 @@ export default async function Home() {
             {pos2Collections.length > 0 && (
               <div className="my-24">
                 {pos2Collections.map(coll => (
-                  <ArticleCollection key={coll.id} collectionId={coll.id} />
+                  <ArticleCollection key={coll.id} collection={coll} articles={coll.articles} />
                 ))}
               </div>
             )}
@@ -211,7 +240,7 @@ export default async function Home() {
 
       {/* Footer Collections (Insert Point 3) */}
       {footerCollections.map(coll => (
-        <ArticleCollection key={coll.id} collectionId={coll.id} />
+        <ArticleCollection key={coll.id} collection={coll} articles={coll.articles} />
       ))}
 
       {/* Newsletter Section */}

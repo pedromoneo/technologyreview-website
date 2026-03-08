@@ -1,6 +1,6 @@
 import { db } from "@/lib/firebase-admin";
 import Link from "next/link";
-import Image from "next/image";
+import SiteImage from "@/components/SiteImage";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 3600;
@@ -57,7 +57,7 @@ export default async function InformesPage() {
                                 className="group block overflow-hidden border-2 border-gray-100 hover:border-accent transition-all"
                             >
                                 <div className="relative aspect-[16/10] overflow-hidden bg-gray-100">
-                                    <Image
+                                    <SiteImage
                                         src={informe.imageUrl || "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&q=80&w=800"}
                                         alt={informe.title}
                                         fill
