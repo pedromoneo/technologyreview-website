@@ -1,5 +1,8 @@
 export interface Article {
   id: string;
+  slug?: string;
+  legacySlug?: string;
+  legacyPath?: string;
   title: string;
   excerpt: string;
   category: string;

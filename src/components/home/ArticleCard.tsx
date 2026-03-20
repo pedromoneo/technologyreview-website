@@ -2,6 +2,7 @@ import Link from "next/link";
 import SiteImage from "@/components/SiteImage";
 import { Article } from "@/data/mock-articles";
 import { cleanExcerpt, truncateToSentence } from "@/lib/content-utils";
+import { getArticlePath } from "@/lib/article-url";
 
 interface ArticleCardProps {
     article: Article;
@@ -10,10 +11,11 @@ interface ArticleCardProps {
 
 export default function ArticleCard({ article, featured = false }: ArticleCardProps) {
     const cleanedExcerpt = cleanExcerpt(article.excerpt);
+    const articlePath = getArticlePath(article);
 
     if (featured) {
         return (
-            <Link href={`/articulos/${article.id}`} className="group relative overflow-hidden bg-primary text-white flex flex-col md:flex-row min-h-[500px] hover:bg-black transition-colors">
+            <Link href={articlePath} className="group relative overflow-hidden bg-primary text-white flex flex-col md:flex-row min-h-[500px] hover:bg-black transition-colors">
                 {/* Image Container */}
                 <div className="relative w-full md:w-1/2 h-80 md:h-[600px] overflow-hidden">
                     <SiteImage
@@ -47,7 +49,7 @@ export default function ArticleCard({ article, featured = false }: ArticleCardPr
     }
 
     return (
-        <Link href={`/articulos/${article.id}`} className="group block">
+        <Link href={articlePath} className="group block">
             <div className="relative aspect-[16/10] mb-8 overflow-hidden bg-gray-100">
                 <SiteImage
                     src={article.imageUrl}

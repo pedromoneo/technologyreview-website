@@ -72,8 +72,8 @@ function saveManifest(manifest) {
     fs.writeFileSync(MANIFEST_PATH, JSON.stringify(nextManifest, null, 2));
 }
 
-function buildDownloadUrl(bucketName, objectPath, token) {
-    return `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodeURIComponent(objectPath)}?alt=media&token=${token}`;
+function buildPublicBucketUrl(bucketName, objectPath) {
+    return `https://storage.googleapis.com/${bucketName}/${String(objectPath).split("/").filter(Boolean).map(encodeURIComponent).join("/")}`;
 }
 
 function inferExtension(sourceUrl, contentType) {
@@ -140,39 +140,37 @@ async function uploadToStorage(bucket, sourceUrl, buffer, contentType) {
     const extension = inferExtension(sourceUrl, contentType);
     const sourceHash = crypto.createHash("sha1").update(sourceUrl).digest("hex");
     const objectPath = `mirrored/legacy-assets/${sourceHash}${extension}`;
-    const downloadToken = crypto.randomUUID();
-
     await bucket.file(objectPath).save(buffer, {
         resumable: false,
         contentType,
         metadata: {
             cacheControl: "public,max-age=31536000,immutable",
             metadata: {
-                firebaseStorageDownloadTokens: downloadToken,
                 mirroredFrom: sourceUrl,
             },
         },
     });
+    await bucket.file(objectPath).makePublic();
 
     return {
         objectPath,
-        downloadUrl: buildDownloadUrl(bucket.name, objectPath, downloadToken),
+        publicUrl: buildPublicBucketUrl(bucket.name, objectPath),
     };
 }
 
 function getManifestDownloadUrl(manifest, originalUrl, candidateUrls) {
-    if (manifest.aliases[originalUrl] && manifest.items[manifest.aliases[originalUrl]]?.downloadUrl) {
+    if (manifest.aliases[originalUrl] && manifest.items[manifest.aliases[originalUrl]]?.objectPath) {
         return {
             sourceUrl: manifest.aliases[originalUrl],
-            downloadUrl: manifest.items[manifest.aliases[originalUrl]].downloadUrl,
+            downloadUrl: buildPublicBucketUrl(process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET, manifest.items[manifest.aliases[originalUrl]].objectPath),
         };
     }
 
     for (const candidateUrl of candidateUrls) {
-        if (manifest.items[candidateUrl]?.downloadUrl) {
+        if (manifest.items[candidateUrl]?.objectPath) {
             return {
                 sourceUrl: candidateUrl,
-                downloadUrl: manifest.items[candidateUrl].downloadUrl,
+                downloadUrl: buildPublicBucketUrl(process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET, manifest.items[candidateUrl].objectPath),
             };
         }
     }
@@ -213,7 +211,7 @@ async function mirrorAsset(originalUrl, attachmentById, manifest, bucket, dryRun
     const uploaded = await uploadToStorage(bucket, downloaded.sourceUrl, downloaded.buffer, downloaded.contentType);
 
     manifest.items[downloaded.sourceUrl] = {
-        downloadUrl: uploaded.downloadUrl,
+        publicUrl: uploaded.publicUrl,
         objectPath: uploaded.objectPath,
         contentType: downloaded.contentType,
         mirroredAt: new Date().toISOString(),
@@ -225,7 +223,7 @@ async function mirrorAsset(originalUrl, attachmentById, manifest, bucket, dryRun
     delete manifest.failures[normalizedOriginalUrl];
     saveManifest(manifest);
 
-    return uploaded.downloadUrl;
+    return uploaded.publicUrl;
 }
 
 async function processCollection(db, bucket, collectionConfig, attachmentById, manifest, options, counters) {

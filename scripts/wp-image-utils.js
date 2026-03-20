@@ -127,7 +127,23 @@ function resolveRetiredImageCandidates(value, attachmentById) {
         return buildAttachmentSourceCandidates(attachmentById.get(attachmentId));
     }
 
-    return isRetiredWordPressUrl(normalizedUrl) ? [normalizedUrl] : [];
+    if (!isRetiredWordPressUrl(normalizedUrl)) return [];
+
+    const candidates = [normalizedUrl];
+    try {
+        const parsed = new URL(normalizedUrl);
+        if (parsed.hostname !== PRIMARY_WORDPRESS_HOST) {
+            const substituted = new URL(normalizedUrl);
+            substituted.hostname = PRIMARY_WORDPRESS_HOST;
+            const substitutedUrl = normalizeUrl(substituted.toString());
+            if (substitutedUrl && !candidates.includes(substitutedUrl)) {
+                candidates.unshift(substitutedUrl);
+            }
+        }
+    } catch {
+        // Ignore URL parse errors.
+    }
+    return candidates;
 }
 
 function extractRetiredImageUrlsFromHtml(html, attachmentById) {

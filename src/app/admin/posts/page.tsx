@@ -6,6 +6,7 @@ import { collection, getDocs, query, orderBy, limit, deleteDoc, doc } from "fire
 import { Plus, Search, Filter, Edit, Trash2, Eye } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { getArticlePath } from "@/lib/article-url";
 
 export default function AdminPostsPage() {
     const [articles, setArticles] = useState<any[]>([]);
@@ -181,7 +182,7 @@ export default function AdminPostsPage() {
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex items-center justify-end space-x-1">
-                                                <Link href={`/articulos/${article.id}`} target="_blank" title="Ver" className="p-1.5 hover:bg-primary/5 rounded-md transition-colors group/icon">
+                                                <Link href={getArticlePath(article)} target="_blank" title="Ver" className="p-1.5 hover:bg-primary/5 rounded-md transition-colors group/icon">
                                                     <Eye className="w-3.5 h-3.5 text-gray-400 group-hover/icon:text-primary" />
                                                 </Link>
                                                 <Link href={`/admin/posts/edit/${article.id}`} title="Editar" className="p-1.5 hover:bg-primary/5 rounded-md transition-colors group/icon">

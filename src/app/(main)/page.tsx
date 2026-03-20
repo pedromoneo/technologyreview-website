@@ -50,6 +50,9 @@ export default async function Home() {
   // Map to common structure
   const mapArticle = (data: any) => ({
     id: data.id,
+    slug: data.slug || "",
+    legacySlug: data.legacySlug || "",
+    legacyPath: data.legacyPath || "",
     title: data.title || "",
     excerpt: data.excerpt || "",
     category: data.category || "General",

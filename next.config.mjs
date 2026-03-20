@@ -1,5 +1,8 @@
+import path from "path";
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+    outputFileTracingRoot: path.resolve("."),
     serverExternalPackages: ['firebase-admin'],
     images: {
         remotePatterns: [

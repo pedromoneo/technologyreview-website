@@ -4,9 +4,13 @@ import { useState, useRef } from "react";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import SiteImage from "@/components/SiteImage";
+import { getArticlePath } from "@/lib/article-url";
 
 interface Article {
     id: string;
+    slug?: string;
+    legacySlug?: string;
+    legacyPath?: string;
     title: string;
     excerpt: string;
     category: string;
@@ -110,7 +114,7 @@ export default function ArticleCollection({ collection, articles }: ArticleColle
                 {articles.map((article, index) => (
                     <Link
                         key={article.id}
-                        href={`/articulos/${article.id}`}
+                        href={getArticlePath(article)}
                         className="flex-shrink-0 w-[280px] md:w-[380px] bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-500 group border border-gray-100 snap-start overflow-hidden flex flex-col h-full"
                     >
                         <div className="p-4 flex items-center justify-between border-b border-gray-50 bg-gray-50/30">

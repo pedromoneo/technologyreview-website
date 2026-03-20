@@ -16,6 +16,9 @@ import ArticleCard from "./ArticleCard";
 
 interface Article {
     id: string;
+    slug?: string;
+    legacySlug?: string;
+    legacyPath?: string;
     title: string;
     excerpt: string;
     category: string;
@@ -65,6 +68,9 @@ export default function LoadMoreStories({ initialLastTimestamp, excludedIds }: L
                     const data = doc.data();
                     return {
                         id: doc.id,
+                        slug: data.slug || "",
+                        legacySlug: data.legacySlug || "",
+                        legacyPath: data.legacyPath || "",
                         title: data.title || "",
                         excerpt: data.excerpt || "",
                         category: data.category || "General",
