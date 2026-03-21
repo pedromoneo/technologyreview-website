@@ -467,6 +467,20 @@ async function processEntry(entry, logId, internalLogId) {
             translation: buildTranslationMetadata(TRANSLATION_STATUS.TRANSLATED),
         });
 
+        // Auto-assign series image for "The Download" / "La Descarga" articles
+        const titleForSeries = (articleData.title || "").trim();
+        const originalTitle = (entry.title || "").trim();
+        if (
+            titleForSeries.startsWith("La Descarga:") ||
+            titleForSeries.startsWith("La Descarga ") ||
+            titleForSeries.toLowerCase().startsWith("the download") ||
+            originalTitle.toLowerCase().startsWith("the download")
+        ) {
+            articleData.imageUrl = "https://storage.googleapis.com/techreview-mgz-1771952-media/series/the-download/the-download-header.png";
+            articleData.series = "the-download";
+            logger.info(`Auto-assigned "The Download" series image for: ${articleData.title}`);
+        }
+
         logger.info(`Generating social post for: ${articleData.title}`);
         if (internalLogId) {
             await logToFirestore("sync", "in_progress", `Generando post social: ${articleData.title}...`, { logId }, internalLogId);
@@ -485,14 +499,23 @@ async function processEntry(entry, logId, internalLogId) {
     } catch (error) {
         logger.error(`Translation failed for article ${originalId}:`, error);
 
+        const fallbackData = sanitizeForFirestore({
+            ...baseArticleData,
+            status: "draft",
+            language: "en",
+            translation: buildTranslationMetadata(TRANSLATION_STATUS.FAILED, error.message),
+            translationSource: serializeTranslationSource(baseArticleData.title, rawExcerpt, bodyBlocks),
+        });
+
+        // Auto-assign series image for "The Download" even on translation failure
+        const origTitle = (entry.title || "").trim().toLowerCase();
+        if (origTitle.startsWith("the download")) {
+            fallbackData.imageUrl = "https://storage.googleapis.com/techreview-mgz-1771952-media/series/the-download/the-download-header.png";
+            fallbackData.series = "the-download";
+        }
+
         return {
-            articleData: sanitizeForFirestore({
-                ...baseArticleData,
-                status: "draft",
-                language: "en",
-                translation: buildTranslationMetadata(TRANSLATION_STATUS.FAILED, error.message),
-                translationSource: serializeTranslationSource(baseArticleData.title, rawExcerpt, bodyBlocks),
-            }),
+            articleData: sanitizeForFirestore(fallbackData),
             syncStatus: "pending_translation",
             error: error.message,
         };
