@@ -22,6 +22,42 @@ const TRANSLATION_STATUS = {
 const MAX_HTML_BLOCKS_PER_CHUNK = 3;
 const MAX_CHARS_PER_TRANSLATION_CHUNK = 12000;
 
+// Mapping from MIT TR API topic names (English) to site categories (Spanish)
+const TOPIC_TO_CATEGORY_MAP = {
+    "artificial intelligence": "Inteligencia Artificial",
+    "biotechnology and health": "Biotecnología",
+    "biotechnology": "Biotecnología",
+    "climate change and energy": "Energía",
+    "energy": "Energía",
+    "climate": "Sostenibilidad",
+    "climate change": "Sostenibilidad",
+    "sustainability": "Sostenibilidad",
+    "space": "Espacio",
+    "computing": "Inteligencia Artificial",
+    "business": "Negocios",
+    "tech policy": "Negocios",
+    "humans and technology": "Inteligencia Artificial",
+    "the download": "General",
+};
+
+const SITE_CATEGORIES = [
+    "Inteligencia Artificial",
+    "Biotecnología",
+    "Energía",
+    "Espacio",
+    "Sostenibilidad",
+    "Negocios",
+];
+
+/**
+ * Map an English API topic name to a Spanish site category
+ */
+function mapTopicToCategory(topicName) {
+    if (!topicName) return "General";
+    const key = topicName.toLowerCase().trim();
+    return TOPIC_TO_CATEGORY_MAP[key] || "General";
+}
+
 let model;
 
 setGlobalOptions({ maxInstances: 5, region: "us-central1" });
@@ -427,8 +463,14 @@ async function processEntry(entry, logId, internalLogId) {
     const bodyBlocks = extractBodyBlocks(entry.body || []);
     const originalContent = buildHtmlContent(bodyBlocks);
 
-    const category = (entry.topics && entry.topics.length > 0) ? entry.topics[0].name : "General";
-    const tags = entry.topics ? entry.topics.map(t => t.name) : [];
+    // API returns "topic" (singular object), not "topics" (array)
+    const rawTopicName = entry.topic?.name || null;
+    let category = mapTopicToCategory(rawTopicName);
+    // If category is still "General", infer from article content
+    if (category === "General") {
+        category = inferCategoryFromContent(entry.title, rawExcerpt, originalContent);
+    }
+    const tags = [category];
     const imageUrl = resolveImageUrl(entry, bodyBlocks);
 
     const baseArticleData = {
@@ -940,6 +982,149 @@ exports.retryTranslationsNow = onCall({
         throw new Error(error.toString());
     }
 });
+
+/**
+ * Re-categorize articles tagged as "General" by fetching their original topic from the API
+ */
+exports.recategorizeGeneralArticles = onCall({
+    timeoutSeconds: 300,
+    maxInstances: 1,
+    memory: "512MiB",
+}, async (request) => {
+    const results = { updated: 0, skipped: 0, failed: 0, details: [] };
+
+    try {
+        const snapshot = await db.collection("articles")
+            .where("category", "==", "General")
+            .get();
+
+        if (snapshot.empty) {
+            return { success: true, message: "No articles with 'General' category found.", results };
+        }
+
+        for (const doc of snapshot.docs) {
+            const data = doc.data();
+            const originalId = data.originalId;
+
+            try {
+                // Try to fetch original topic from MIT TR API
+                let newCategory = null;
+                if (originalId) {
+                    const apiUrl = `https://wp.technologyreview.com/wp-json/mittr/v1/entry/${originalId}`;
+                    try {
+                        const response = await axios.get(apiUrl);
+                        const topicName = response.data?.topic?.name || null;
+                        if (topicName) {
+                            newCategory = mapTopicToCategory(topicName);
+                        }
+                    } catch (apiErr) {
+                        logger.warn(`Could not fetch API data for article ${originalId}: ${apiErr.message}`);
+                    }
+                }
+
+                // If still General or no API data, auto-assign based on content analysis
+                if (!newCategory || newCategory === "General") {
+                    newCategory = inferCategoryFromContent(data.title, data.excerpt, data.content);
+                }
+
+                if (newCategory && newCategory !== "General") {
+                    await doc.ref.update({
+                        category: newCategory,
+                        tags: admin.firestore.FieldValue.arrayUnion(newCategory),
+                        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+                    });
+                    results.updated++;
+                    results.details.push({ id: doc.id, title: data.title, newCategory });
+                    logger.info(`Recategorized "${data.title}" → ${newCategory}`);
+                } else {
+                    results.skipped++;
+                    results.details.push({ id: doc.id, title: data.title, reason: "Could not determine category" });
+                }
+            } catch (err) {
+                results.failed++;
+                results.details.push({ id: doc.id, title: data.title, error: err.message });
+                logger.error(`Error recategorizing ${doc.id}:`, err);
+            }
+        }
+
+        return {
+            success: true,
+            message: `Recategorization complete: ${results.updated} updated, ${results.skipped} skipped, ${results.failed} failed.`,
+            results,
+        };
+    } catch (error) {
+        logger.error("Recategorize error:", error);
+        throw new Error(error.toString());
+    }
+});
+
+/**
+ * Infer a category from article title, excerpt, and content using keyword matching
+ */
+function inferCategoryFromContent(title, excerpt, content) {
+    const text = `${title || ""} ${excerpt || ""} ${(content || "").substring(0, 2000)}`.toLowerCase();
+
+    const categoryKeywords = {
+        "Inteligencia Artificial": [
+            "inteligencia artificial", " ia ", " ai ", "machine learning", "aprendizaje automático",
+            "deep learning", "aprendizaje profundo", "chatgpt", "openai", "gpt", "llm",
+            "modelo de lenguaje", "red neuronal", "neural network", "algoritmo", "automatización",
+            "robot", "visión artificial", "procesamiento de lenguaje", "nlp", "generativa",
+            "gemini", "claude", "anthropic", "deepmind", "copilot", "chatbot",
+        ],
+        "Biotecnología": [
+            "biotecnología", "biotech", "gen ", "genética", "genoma", "crispr",
+            "célula", "proteína", "fármaco", "medicamento", "vacuna", "médic",
+            "salud", "enfermedad", "cáncer", "terapia", "clínic", "hospital",
+            "biología", "neurociencia", "cerebro", "adn", "arn",
+            "psicodélico", "psilocibina", "mdma",
+        ],
+        "Energía": [
+            "energía", "energy", "batería", "battery", "solar", "eólica", "wind",
+            "nuclear", "reactor", "fisión", "fusión", "hidrógeno", "hydrogen",
+            "eléctric", "electric", "red eléctrica", "grid", "renovable", "renewable",
+            "petróleo", "gas natural", "carbón",
+        ],
+        "Espacio": [
+            "espacio", "space", "nasa", "spacex", "cohete", "rocket", "satélite",
+            "órbita", "orbit", "luna", "moon", "marte", "mars", "asteroid",
+            "astronaut", "telescopio", "telescope", "galaxia", "galaxy", "cosmos",
+            "estación espacial", "lanzamiento",
+        ],
+        "Sostenibilidad": [
+            "sostenibilidad", "sustainability", "cambio climático", "climate change",
+            "emisiones", "emissions", "carbono", "carbon", "contaminación", "pollution",
+            "reciclaje", "recycl", "medio ambiente", "environment", "biodiversidad",
+            "incendio forestal", "wildfire", "calentamiento global", "deforestación",
+            "océano", "agua",
+        ],
+        "Negocios": [
+            "negocio", "business", "empresa", "company", "startup", "inversión",
+            "inversor", "capital", "mercado", "market", "acción", "bolsa",
+            "regulación", "regulation", "política", "policy", "gobierno", "government",
+            "pentágono", "pentagon", "defensa", "militar", "geopolítica",
+            "china", "ee.uu", "congreso", "senado",
+        ],
+    };
+
+    let bestCategory = "General";
+    let bestScore = 0;
+
+    for (const [category, keywords] of Object.entries(categoryKeywords)) {
+        let score = 0;
+        for (const keyword of keywords) {
+            if (text.includes(keyword)) {
+                score++;
+            }
+        }
+        if (score > bestScore) {
+            bestScore = score;
+            bestCategory = category;
+        }
+    }
+
+    return bestScore > 0 ? bestCategory : "Inteligencia Artificial";
+}
 
 /**
  * Sends a Magic Link via Resend
