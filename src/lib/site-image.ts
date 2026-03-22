@@ -18,9 +18,6 @@ function isUnsplashHost(hostname: string) {
     return hostname === "images.unsplash.com" || hostname.endsWith(".unsplash.com");
 }
 
-function isFirebaseStorageHost(hostname: string) {
-    return hostname === "firebasestorage.googleapis.com" || hostname === "storage.googleapis.com";
-}
 
 export function isWordPressAttachmentPageUrl(src: string) {
     if (!src || src.startsWith("/")) return false;
@@ -58,7 +55,9 @@ export function canUseDirectResponsiveImage(src: string) {
 
     try {
         const url = new URL(src);
-        return isTechReviewHost(url.hostname) || isUnsplashHost(url.hostname) || isFirebaseStorageHost(url.hostname);
+        // Firebase Storage images go through Next.js /_next/image for optimization
+        // Only WordPress and Unsplash have their own resize APIs
+        return isTechReviewHost(url.hostname) || isUnsplashHost(url.hostname);
     } catch {
         return false;
     }
@@ -88,10 +87,8 @@ export function siteImageLoader({ src, width, quality }: ImageLoaderProps) {
             return url.toString();
         }
 
-        if (isFirebaseStorageHost(url.hostname)) {
-            return src;
-        }
-
+        // Firebase Storage images are NOT handled here — they go through
+        // Next.js /_next/image optimization for proper resizing and webp conversion
         return src;
     } catch {
         return src;
