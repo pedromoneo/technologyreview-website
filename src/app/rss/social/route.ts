@@ -38,7 +38,7 @@ export async function GET(request: Request) {
     try {
         const snapshot = await db.collection("articles")
             .where("status", "in", ["published", "featured"])
-            .orderBy("date", "desc")
+            .orderBy("publishedAt", "desc")
             .limit(30)
             .get();
 
@@ -50,9 +50,10 @@ export async function GET(request: Request) {
             }
             let imageType = 'image/jpeg';
             if (imageUrl) {
-                if (imageUrl.toLowerCase().endsWith('.png')) imageType = 'image/png';
-                else if (imageUrl.toLowerCase().endsWith('.gif')) imageType = 'image/gif';
-                else if (imageUrl.toLowerCase().endsWith('.webp')) imageType = 'image/webp';
+                const urlPath = imageUrl.split('?')[0].toLowerCase();
+                if (urlPath.endsWith('.png')) imageType = 'image/png';
+                else if (urlPath.endsWith('.gif')) imageType = 'image/gif';
+                else if (urlPath.endsWith('.webp')) imageType = 'image/webp';
             }
 
             // Priority: Pre-generated AI social post -> Excerpt -> Title
@@ -60,15 +61,14 @@ export async function GET(request: Request) {
 
             const item: any = {
                 title: socialText,
-                description: `<div>${imageUrl && !imageUrl.includes('?') ? `<img src="${imageUrl}" style="max-width:100%; margin-bottom: 20px;" /><br/>` : ""}${data.excerpt || data.title || ""}</div>`,
+                description: `<div>${imageUrl ? `<img src="${imageUrl}" style="max-width:100%; margin-bottom: 20px;" /><br/>` : ""}${data.excerpt || data.title || ""}</div>`,
                 url: `${siteUrl}/${data.slug || doc.id}`,
                 guid: doc.id,
-                date: parseRSSDate(data.date || data.migratedAt),
+                date: parseRSSDate(data.publishedAt || data.date || data.migratedAt),
                 custom_elements: []
             };
 
-            // ONLY add to feed if it has a valid image and is NOT an attachment link
-            if (imageUrl && !imageUrl.includes('?')) {
+            if (imageUrl) {
                 item.enclosure = { url: imageUrl, type: imageType };
                 item.custom_elements.push({
                     'media:content': {
@@ -79,8 +79,8 @@ export async function GET(request: Request) {
                         }
                     }
                 });
-                feed.item(item);
             }
+            feed.item(item);
         });
 
         const xml = feed.xml();
