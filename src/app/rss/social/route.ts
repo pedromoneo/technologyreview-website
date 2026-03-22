@@ -39,7 +39,7 @@ export async function GET(request: Request) {
         const snapshot = await db.collection("articles")
             .where("status", "in", ["published", "featured"])
             .orderBy("publishedAt", "desc")
-            .limit(30)
+            .limit(10)
             .get();
 
         snapshot.docs.forEach((doc) => {
