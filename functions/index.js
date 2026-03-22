@@ -276,6 +276,10 @@ function resolveImageUrl(entry, bodyBlocks) {
         try {
             const parsedUrl = new URL(url);
             parsedUrl.protocol = "https:";
+            // Strip WordPress resize/crop parameters to get full-size image
+            for (const param of ["w", "h", "width", "height", "crop", "resize", "fit"]) {
+                parsedUrl.searchParams.delete(param);
+            }
             return parsedUrl.toString();
         } catch {
             return url;
@@ -347,8 +351,14 @@ async function mirrorImageToStorage(imageUrl) {
             return imageUrl;
         }
 
-        // Generate deterministic storage path from URL hash
-        const urlHash = crypto.createHash("sha1").update(imageUrl).digest("hex");
+        // Strip WordPress resize/crop parameters to download full-size image
+        for (const param of ["w", "h", "width", "height", "crop", "resize", "fit"]) {
+            parsedUrl.searchParams.delete(param);
+        }
+        const cleanUrl = parsedUrl.toString();
+
+        // Generate deterministic storage path from clean URL hash
+        const urlHash = crypto.createHash("sha1").update(cleanUrl).digest("hex");
         const ext = path.extname(parsedUrl.pathname).toLowerCase() || ".jpg";
         const objectPath = `imported/articles/${urlHash}${ext}`;
         const file = storageBucket.file(objectPath);
@@ -360,8 +370,8 @@ async function mirrorImageToStorage(imageUrl) {
             return publicUrl;
         }
 
-        // Download the image with timeout
-        const response = await axios.get(imageUrl, {
+        // Download the full-size image with timeout
+        const response = await axios.get(cleanUrl, {
             responseType: "arraybuffer",
             timeout: 30000,
             maxContentLength: 10 * 1024 * 1024, // 10MB limit
@@ -369,7 +379,7 @@ async function mirrorImageToStorage(imageUrl) {
 
         const contentType = response.headers["content-type"] || "image/jpeg";
         if (!contentType.startsWith("image/")) {
-            logger.warn(`mirrorImageToStorage: not an image (${contentType}): ${imageUrl}`);
+            logger.warn(`mirrorImageToStorage: not an image (${contentType}): ${cleanUrl}`);
             return imageUrl;
         }
 
@@ -380,14 +390,14 @@ async function mirrorImageToStorage(imageUrl) {
             metadata: {
                 cacheControl: "public,max-age=31536000,immutable",
                 metadata: {
-                    mirroredFrom: imageUrl,
+                    mirroredFrom: cleanUrl,
                 },
             },
         });
         await file.makePublic();
 
         const publicUrl = `https://storage.googleapis.com/${storageBucket.name}/${objectPath}`;
-        logger.info(`Mirrored image: ${imageUrl} -> ${publicUrl}`);
+        logger.info(`Mirrored image: ${cleanUrl} -> ${publicUrl}`);
         return publicUrl;
     } catch (error) {
         logger.error(`Failed to mirror image ${imageUrl}: ${error.message}`);

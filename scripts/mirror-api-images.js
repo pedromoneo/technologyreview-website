@@ -78,15 +78,29 @@ function isExternalImageUrl(url) {
     }
 }
 
+function stripResizeParams(url) {
+    try {
+        const parsed = new URL(url);
+        for (const param of ["w", "h", "width", "height", "crop", "resize", "fit"]) {
+            parsed.searchParams.delete(param);
+        }
+        return parsed.toString();
+    } catch {
+        return url;
+    }
+}
+
 async function mirrorImage(imageUrl, bucket, dryRun) {
     if (!isExternalImageUrl(imageUrl)) return null;
 
-    const urlHash = crypto.createHash("sha1").update(imageUrl).digest("hex");
-    const ext = inferExtension(imageUrl, null);
+    // Strip resize params to get full-size image
+    const cleanUrl = stripResizeParams(imageUrl);
+    const urlHash = crypto.createHash("sha1").update(cleanUrl).digest("hex");
+    const ext = inferExtension(cleanUrl, null);
     const objectPath = `imported/articles/${urlHash}${ext}`;
     const file = bucket.file(objectPath);
 
-    // Check if already mirrored
+    // Check if already mirrored at full size
     const [exists] = await file.exists();
     if (exists) {
         return buildPublicUrl(bucket.name, objectPath);
@@ -100,7 +114,7 @@ async function mirrorImage(imageUrl, bucket, dryRun) {
     const timeout = setTimeout(() => controller.abort(), 30000);
 
     try {
-        const response = await fetch(imageUrl, {
+        const response = await fetch(cleanUrl, {
             redirect: "follow",
             signal: controller.signal,
         });
@@ -121,7 +135,7 @@ async function mirrorImage(imageUrl, bucket, dryRun) {
             contentType,
             metadata: {
                 cacheControl: "public,max-age=31536000,immutable",
-                metadata: { mirroredFrom: imageUrl },
+                metadata: { mirroredFrom: cleanUrl },
             },
         });
         await file.makePublic();
@@ -129,6 +143,91 @@ async function mirrorImage(imageUrl, bucket, dryRun) {
         return buildPublicUrl(bucket.name, objectPath);
     } finally {
         clearTimeout(timeout);
+    }
+}
+
+/**
+ * Re-download an image already in Firebase Storage if it was stored at thumbnail size.
+ * Reads the mirroredFrom metadata, strips resize params, re-downloads full-size.
+ */
+async function upgradeStorageImage(storageUrl, bucket, dryRun) {
+    if (!storageUrl || typeof storageUrl !== "string") return null;
+    try {
+        const parsed = new URL(storageUrl);
+        if (parsed.hostname !== "storage.googleapis.com") return null;
+
+        // Extract the object path from the URL
+        const pathParts = parsed.pathname.split("/").filter(Boolean);
+        // URL format: /bucketName/path/to/file
+        const bucketName = pathParts[0];
+        const objectPath = pathParts.slice(1).map(decodeURIComponent).join("/");
+        const file = bucket.file(objectPath);
+
+        const [exists] = await file.exists();
+        if (!exists) return null;
+
+        const [metadata] = await file.getMetadata();
+        const size = parseInt(metadata.size, 10);
+
+        // Only re-download if image is suspiciously small (< 50KB = likely thumbnail)
+        if (size > 50000) return null;
+
+        const mirroredFrom = metadata.metadata?.mirroredFrom;
+        if (!mirroredFrom) return null;
+
+        // Strip resize params from the original source URL
+        const cleanUrl = stripResizeParams(mirroredFrom);
+        if (cleanUrl === mirroredFrom) {
+            // No resize params found — the source was already full-size, image is just small
+            return null;
+        }
+
+        // New hash from clean URL = new storage path
+        const urlHash = crypto.createHash("sha1").update(cleanUrl).digest("hex");
+        const ext = inferExtension(cleanUrl, null);
+        const newObjectPath = `imported/articles/${urlHash}${ext}`;
+        const newFile = bucket.file(newObjectPath);
+
+        const [newExists] = await newFile.exists();
+        if (newExists) {
+            return buildPublicUrl(bucket.name, newObjectPath);
+        }
+
+        if (dryRun) {
+            return `[dry-run] would re-download full-size: ${cleanUrl} (was ${size} bytes)`;
+        }
+
+        console.log(`  Re-downloading full-size: ${cleanUrl} (was ${size} bytes)`);
+
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 30000);
+        try {
+            const response = await fetch(cleanUrl, {
+                redirect: "follow",
+                signal: controller.signal,
+            });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+            const contentType = response.headers.get("content-type") || "image/jpeg";
+            const buffer = Buffer.from(await response.arrayBuffer());
+
+            await newFile.save(buffer, {
+                resumable: false,
+                contentType,
+                metadata: {
+                    cacheControl: "public,max-age=31536000,immutable",
+                    metadata: { mirroredFrom: cleanUrl },
+                },
+            });
+            await newFile.makePublic();
+
+            return buildPublicUrl(bucket.name, newObjectPath);
+        } finally {
+            clearTimeout(timeout);
+        }
+    } catch (error) {
+        console.error(`  Failed to upgrade image: ${error.message}`);
+        return null;
     }
 }
 
@@ -192,7 +291,7 @@ async function main() {
             const updates = {};
             let changed = false;
 
-            // 1. Mirror the main imageUrl
+            // 1. Mirror the main imageUrl (external) or upgrade (small Firebase Storage)
             if (isExternalImageUrl(data.imageUrl)) {
                 try {
                     const mirrored = await mirrorImage(data.imageUrl, bucket, options.dryRun);
@@ -202,11 +301,27 @@ async function main() {
                         counters.imagesMirrored++;
                     } else if (mirrored && mirrored.startsWith("[dry-run]")) {
                         counters.imagesMirrored++;
-                        changed = true; // Count as would-be-changed
+                        changed = true;
                     }
                 } catch (error) {
                     counters.failed++;
                     console.error(`  FAIL ${docSnap.id} imageUrl: ${error.message}`);
+                }
+            } else if (data.imageUrl && data.imageUrl.includes("storage.googleapis.com")) {
+                // Check if existing Firebase Storage image is a thumbnail that needs upgrading
+                try {
+                    const upgraded = await upgradeStorageImage(data.imageUrl, bucket, options.dryRun);
+                    if (upgraded && upgraded !== data.imageUrl && !upgraded.startsWith("[dry-run]")) {
+                        updates.imageUrl = upgraded;
+                        changed = true;
+                        counters.imagesMirrored++;
+                    } else if (upgraded && upgraded.startsWith("[dry-run]")) {
+                        counters.imagesMirrored++;
+                        changed = true;
+                    }
+                } catch (error) {
+                    counters.failed++;
+                    console.error(`  FAIL ${docSnap.id} upgrade: ${error.message}`);
                 }
             }
 
