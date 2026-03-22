@@ -7,19 +7,21 @@ export const revalidate = 3600;
 export default async function TemasPage() {
     if (!db) return null;
 
-    // Optimize: only fetch the category field to reduce data transfer
-    const snapshot = await db.collection("articles").select("category").get();
-    const categories = new Set<string>();
-
-    // Categories that are actually informes/reports, not temas
-    const INFORME_CATEGORIES = new Set([
-        "10 Tecnologías Emergentes",
-        "Innovadores Menores de 35",
+    // Fetch article categories and informe titles in parallel
+    const [articleSnap, informeSnap] = await Promise.all([
+        db.collection("articles").select("category").get(),
+        db.collection("informes").select("title").get(),
     ]);
 
-    snapshot.docs.forEach(doc => {
+    // Build a set of informe titles to exclude from temas
+    const informeTitles = new Set<string>(
+        informeSnap.docs.map(doc => doc.data().title).filter(Boolean)
+    );
+
+    const categories = new Set<string>();
+    articleSnap.docs.forEach(doc => {
         const data = doc.data();
-        if (data.category && !INFORME_CATEGORIES.has(data.category)) {
+        if (data.category && !informeTitles.has(data.category)) {
             categories.add(data.category);
         }
     });

@@ -132,7 +132,7 @@ function renderTopicPage(topic: string, articles: any[], currentPage: number, to
                 </div>
             </header>
 
-            <main className="container mx-auto px-6 py-20">
+            <main className="container mx-auto px-6 py-20 max-w-full overflow-hidden">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-20">
                     {articles.map((article) => (
                         <ArticleCard key={article.id} article={article} />
