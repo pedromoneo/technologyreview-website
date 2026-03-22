@@ -62,7 +62,7 @@ export async function GET(request: Request) {
             const item: any = {
                 title: socialText,
                 description: `<div>${imageUrl ? `<img src="${imageUrl}" style="max-width:100%; margin-bottom: 20px;" /><br/>` : ""}${data.excerpt || data.title || ""}</div>`,
-                url: `${siteUrl}/${data.slug || doc.id}`,
+                url: `${siteUrl}/article/${data.legacySlug || data.slug || doc.id}`,
                 guid: doc.id,
                 date: parseRSSDate(data.publishedAt || data.date || data.migratedAt),
                 custom_elements: []

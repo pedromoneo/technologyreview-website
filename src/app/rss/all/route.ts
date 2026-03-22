@@ -65,7 +65,7 @@ export async function GET(request: Request) {
             const item: any = {
                 title: data.title || "Sin título",
                 description: `<div>${imageUrl ? `<img src="${imageUrl}" style="max-width:100%; margin-bottom: 20px;" /><br/>` : ""}${data.excerpt || ""}</div>`,
-                url: `${siteUrl}/${data.slug || doc.id}`,
+                url: `${siteUrl}/article/${data.legacySlug || data.slug || doc.id}`,
                 guid: doc.id,
                 categories: [data.category || "General"],
                 author: data.author || "Redacción",
