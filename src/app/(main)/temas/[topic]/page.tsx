@@ -114,14 +114,14 @@ function renderTopicPage(topic: string, articles: any[], currentPage: number, to
     };
 
     return (
-        <div className="pt-32 min-h-screen bg-white">
+        <div className="pt-32 min-h-screen bg-white overflow-x-hidden">
             <header className="border-b">
-                <div className="container mx-auto px-6 py-12">
+                <div className="container mx-auto px-6 py-12 overflow-hidden">
                     <div className="flex items-center space-x-4 mb-4">
-                        <div className="w-12 h-1 bg-accent" />
+                        <div className="w-12 h-1 bg-accent flex-shrink-0" />
                         <span className="text-xs font-black uppercase tracking-[0.3em] text-primary">Tema</span>
                     </div>
-                    <h1 className="text-5xl md:text-7xl font-black italic tracking-tighter uppercase text-primary">
+                    <h1 className="text-3xl sm:text-5xl md:text-7xl font-black italic tracking-tighter uppercase text-primary break-words">
                         {topicDisplay}
                     </h1>
                     {totalPages > 0 && (

@@ -11,9 +11,17 @@ export default async function TemasPage() {
     const snapshot = await db.collection("articles").select("category").get();
     const categories = new Set<string>();
 
+    // Categories that are actually informes/reports, not temas
+    const INFORME_CATEGORIES = new Set([
+        "10 Tecnologías Emergentes",
+        "Innovadores Menores de 35",
+    ]);
+
     snapshot.docs.forEach(doc => {
         const data = doc.data();
-        if (data.category) categories.add(data.category);
+        if (data.category && !INFORME_CATEGORIES.has(data.category)) {
+            categories.add(data.category);
+        }
     });
 
     const sortedCategories = Array.from(categories).sort();

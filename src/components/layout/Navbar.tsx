@@ -57,23 +57,23 @@ export default function Navbar({ topics, featuredInformes }: NavbarProps) {
                 <div className="container mx-auto px-6 h-full">
                     <div className="grid grid-cols-3 items-center h-full">
                         {/* Left: Menu & Logo */}
-                        <div className="flex items-center space-x-4">
+                        <div className="flex items-center space-x-2 md:space-x-4 min-w-0">
                             <button
                                 onClick={() => setIsMenuOpen(true)}
-                                className="lg:hidden p-2 hover:bg-gray-100 rounded-full transition-colors"
+                                className="lg:hidden p-2 hover:bg-gray-100 rounded-full transition-colors flex-shrink-0"
                                 aria-label="Menú"
                             >
                                 <Menu className="w-6 h-6 text-primary" />
                             </button>
-                            <Link href="/" className="flex items-center">
-                                <div className={`relative transition-all duration-500 ${isScrolled ? "h-8 w-40 md:w-56" : "h-10 md:h-12 w-48 md:w-80"}`}>
+                            <Link href="/" className="flex items-center min-w-0">
+                                <div className={`relative transition-all duration-500 flex-shrink-0 ${isScrolled ? "h-8 w-28 md:w-56" : "h-8 md:h-12 w-32 md:w-80"}`}>
                                     <Image
                                         src="/logo.png"
                                         alt="MIT Technology Review"
                                         fill
                                         className="object-contain object-left"
                                         priority
-                                        sizes="(max-width: 768px) 200px, 320px"
+                                        sizes="(max-width: 768px) 128px, 320px"
                                     />
                                 </div>
                             </Link>
