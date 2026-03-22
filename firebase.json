@@ -7,8 +7,7 @@
     "source": ".",
     "frameworksBackend": {
       "region": "us-central1",
-      "memory": "1GiB",
-      "minInstances": 1
+      "memory": "1GiB"
     },
     "headers": [
       {
