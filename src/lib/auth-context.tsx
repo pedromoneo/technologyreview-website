@@ -56,71 +56,63 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         checkEmailLink()
 
-        const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
+        const unsubscribe = onAuthStateChanged(auth, (authUser) => {
             setUser(authUser)
+            setLoading(false)
 
             if (authUser?.email) {
                 const normalizedEmail = authUser.email.toLowerCase();
 
-                // 1. Check Admin Status (CMS)
-                try {
-                    let userIsAdmin = false;
-                    const adminDocRef = doc(db, 'authorized_users', normalizedEmail);
+                // 1. Check Admin Status (CMS) — runs in background
+                const adminDocRef = doc(db, 'authorized_users', normalizedEmail);
 
-                    if (SUPER_ADMINS.includes(normalizedEmail)) {
-                        userIsAdmin = true;
-                        await setDoc(adminDocRef, {
-                            email: normalizedEmail,
-                            role: "Super Admin",
-                            lastLoginAt: serverTimestamp()
-                        }, { merge: true });
-                    } else {
-                        const adminDoc = await getDoc(adminDocRef);
-                        if (adminDoc.exists()) {
-                            userIsAdmin = true;
-                            await setDoc(adminDocRef, {
+                if (SUPER_ADMINS.includes(normalizedEmail)) {
+                    setIsAdmin(true);
+                    setDoc(adminDocRef, {
+                        email: normalizedEmail,
+                        role: "Super Admin",
+                        lastLoginAt: serverTimestamp()
+                    }, { merge: true }).catch((error) => console.error('Error updating admin doc:', error));
+                } else {
+                    getDoc(adminDocRef).then((adminDoc) => {
+                        const userIsAdmin = adminDoc.exists();
+                        setIsAdmin(userIsAdmin);
+                        if (userIsAdmin) {
+                            setDoc(adminDocRef, {
                                 lastLoginAt: serverTimestamp()
-                            }, { merge: true });
+                            }, { merge: true }).catch((error) => console.error('Error updating admin login:', error));
                         }
-                    }
-                    setIsAdmin(userIsAdmin);
-                } catch (error) {
-                    console.error('Error checking admin status:', error);
-                    setIsAdmin(false);
+                    }).catch((error) => {
+                        console.error('Error checking admin status:', error);
+                        setIsAdmin(false);
+                    });
                 }
 
-                // 2. Check & Sync Subscriber Status (Magazine)
-                try {
-                    const subscriberRef = doc(db, 'subscribers', authUser.uid);
-                    const subscriberSnap = await getDoc(subscriberRef);
-
+                // 2. Check & Sync Subscriber Status (Magazine) — runs in background
+                const subscriberRef = doc(db, 'subscribers', authUser.uid);
+                getDoc(subscriberRef).then((subscriberSnap) => {
                     if (!subscriberSnap.exists()) {
-                        // Create basic subscriber profile
-                        await setDoc(subscriberRef, {
+                        setDoc(subscriberRef, {
                             email: normalizedEmail,
                             displayName: authUser.displayName || '',
                             createdAt: serverTimestamp(),
                             lastLogin: serverTimestamp(),
                             status: 'active'
-                        }, { merge: true });
-                        setIsSubscriber(true);
+                        }, { merge: true }).catch((error) => console.error('Error creating subscriber:', error));
                     } else {
-                        // Update last login
-                        await setDoc(subscriberRef, {
+                        setDoc(subscriberRef, {
                             lastLogin: serverTimestamp()
-                        }, { merge: true });
-                        setIsSubscriber(true);
+                        }, { merge: true }).catch((error) => console.error('Error updating subscriber login:', error));
                     }
-                } catch (error) {
+                    setIsSubscriber(true);
+                }).catch((error) => {
                     console.error('Error syncing subscriber status:', error)
                     setIsSubscriber(false)
-                }
+                });
             } else {
                 setIsAdmin(false)
                 setIsSubscriber(false)
             }
-
-            setLoading(false)
         })
 
         return unsubscribe

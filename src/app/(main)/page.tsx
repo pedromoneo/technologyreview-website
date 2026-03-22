@@ -5,16 +5,12 @@ import { ArrowRight } from "lucide-react";
 import { db } from "@/lib/firebase-admin";
 import { slugify } from "@/lib/content-utils";
 import LoadMoreStories from "@/components/home/LoadMoreStories";
-import { unstable_noStore as noStore } from "next/cache";
+import { getCategories, getFeaturedInformes } from "@/lib/data-cache";
+import { DEFAULT_ARTICLE_IMAGE } from "@/lib/site-image";
 
-export const dynamic = "force-dynamic";
-
-const DEFAULT_TOPICS = ["Inteligencia Artificial", "Biotecnología", "Energía", "Espacio", "Sostenibilidad", "Negocios"];
-const DEFAULT_ARTICLE_IMAGE = "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&q=80&w=800";
+export const revalidate = 60;
 
 export default async function Home() {
-  noStore();
-
   if (!db) {
     console.error("Database not initialized");
     return (
@@ -25,22 +21,19 @@ export default async function Home() {
   }
 
   // Run all Firestore queries in parallel for faster page load
-  const [latestSnap, categoriesSnap, collectionsSnap, featuredInformesSnap] = await Promise.all([
+  const [latestSnap, sideTopics, collectionsSnap, featuredInformes] = await Promise.all([
     // 1. Latest posts
     db.collection("articles")
       .where("status", "in", ["published", "featured"])
       .orderBy("publishedAt", "desc")
       .limit(21)
       .get(),
-    // 2. Categories
-    db.collection("settings").doc("categories").get(),
+    // 2. Categories (deduplicated via React.cache)
+    getCategories(),
     // 3. Collections
     db.collection("collections").orderBy("createdAt", "desc").get(),
-    // 4. Featured Informes
-    db.collection("informes")
-      .where("status", "==", "featured")
-      .limit(5)
-      .get(),
+    // 4. Featured Informes (deduplicated via React.cache)
+    getFeaturedInformes(),
   ]);
 
   const allFetched = latestSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -84,7 +77,7 @@ export default async function Home() {
   const next8 = latestArticles.slice(4, 12);
   const remaining = latestArticles.slice(12);
 
-  const sideTopics = categoriesSnap.exists ? (categoriesSnap.data()?.list || []) : DEFAULT_TOPICS;
+  // sideTopics already resolved from getCategories()
 
   const allCollections = collectionsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
   const uniqueCollectionArticleIds = Array.from(
@@ -119,7 +112,7 @@ export default async function Home() {
   const pos2Collections = hydratedCollections.filter((c: any) => c.insertionPoint === 'pos2');
   const footerCollections = hydratedCollections.filter((c: any) => c.insertionPoint === 'footer' || !c.insertionPoint);
 
-  const featuredInformes = featuredInformesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  // featuredInformes already resolved from getFeaturedInformes()
 
   return (
     <div className="flex flex-col pt-28">

@@ -3,8 +3,8 @@ import ArticleCard from "@/components/home/ArticleCard";
 import { notFound } from "next/navigation";
 import { slugify } from "@/lib/content-utils";
 import Link from "next/link";
+import { DEFAULT_ARTICLE_IMAGE } from "@/lib/site-image";
 
-export const dynamic = "force-dynamic";
 export const revalidate = 600; // 10 minutes cache for topic pages
 
 interface TopicPageProps {
@@ -48,7 +48,7 @@ export default async function TopicPage({ params, searchParams }: TopicPageProps
             author: data.author || "Redacción",
             date: data.date || "",
             readingTime: data.readingTime || "1 min",
-            imageUrl: data.imageUrl || "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&q=80&w=800",
+            imageUrl: data.imageUrl || DEFAULT_ARTICLE_IMAGE,
         };
     });
 

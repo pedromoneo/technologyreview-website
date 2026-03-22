@@ -7,9 +7,11 @@ const axios = require("axios");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const logger = require("firebase-functions/logger");
 const crypto = require("crypto");
+const path = require("path");
 
 admin.initializeApp();
 const db = admin.firestore();
+const storageBucket = admin.storage().bucket();
 
 // Explicitly using gemini-2.5-flash as the latest standard version
 const MODEL_NAME = "gemini-2.5-flash";
@@ -327,6 +329,112 @@ function resolveImageUrl(entry, bodyBlocks) {
     return imageUrl;
 }
 
+/**
+ * Download an image from an external URL and upload to Firebase Storage.
+ * Returns the public Storage URL, or the original URL if mirroring fails.
+ */
+async function mirrorImageToStorage(imageUrl) {
+    if (!imageUrl) return null;
+
+    try {
+        const parsedUrl = new URL(imageUrl);
+
+        // Skip if already on Firebase Storage
+        if (
+            parsedUrl.hostname === "firebasestorage.googleapis.com" ||
+            parsedUrl.hostname === "storage.googleapis.com"
+        ) {
+            return imageUrl;
+        }
+
+        // Generate deterministic storage path from URL hash
+        const urlHash = crypto.createHash("sha1").update(imageUrl).digest("hex");
+        const ext = path.extname(parsedUrl.pathname).toLowerCase() || ".jpg";
+        const objectPath = `imported/articles/${urlHash}${ext}`;
+        const file = storageBucket.file(objectPath);
+
+        // Skip if already uploaded (idempotent)
+        const [exists] = await file.exists();
+        if (exists) {
+            const publicUrl = `https://storage.googleapis.com/${storageBucket.name}/${objectPath}`;
+            return publicUrl;
+        }
+
+        // Download the image with timeout
+        const response = await axios.get(imageUrl, {
+            responseType: "arraybuffer",
+            timeout: 30000,
+            maxContentLength: 10 * 1024 * 1024, // 10MB limit
+        });
+
+        const contentType = response.headers["content-type"] || "image/jpeg";
+        if (!contentType.startsWith("image/")) {
+            logger.warn(`mirrorImageToStorage: not an image (${contentType}): ${imageUrl}`);
+            return imageUrl;
+        }
+
+        // Upload to Firebase Storage
+        await file.save(Buffer.from(response.data), {
+            resumable: false,
+            contentType,
+            metadata: {
+                cacheControl: "public,max-age=31536000,immutable",
+                metadata: {
+                    mirroredFrom: imageUrl,
+                },
+            },
+        });
+        await file.makePublic();
+
+        const publicUrl = `https://storage.googleapis.com/${storageBucket.name}/${objectPath}`;
+        logger.info(`Mirrored image: ${imageUrl} -> ${publicUrl}`);
+        return publicUrl;
+    } catch (error) {
+        logger.error(`Failed to mirror image ${imageUrl}: ${error.message}`);
+        return imageUrl; // Fall back to original URL
+    }
+}
+
+/**
+ * Replace external image URLs in HTML content with Firebase Storage URLs.
+ */
+async function mirrorHtmlImages(htmlContent) {
+    if (!htmlContent || typeof htmlContent !== "string") return htmlContent;
+
+    // Find all image URLs in src attributes
+    const imgRegex = /src=["'](https?:\/\/[^"']+)["']/g;
+    const matches = [...htmlContent.matchAll(imgRegex)];
+    const externalUrls = new Set();
+
+    for (const match of matches) {
+        const url = match[1];
+        try {
+            const parsed = new URL(url);
+            if (
+                parsed.hostname !== "firebasestorage.googleapis.com" &&
+                parsed.hostname !== "storage.googleapis.com" &&
+                (parsed.hostname.includes("technologyreview") || parsed.hostname.includes("wp."))
+            ) {
+                externalUrls.add(url);
+            }
+        } catch {
+            // Skip invalid URLs
+        }
+    }
+
+    if (externalUrls.size === 0) return htmlContent;
+
+    let updatedHtml = htmlContent;
+    for (const originalUrl of externalUrls) {
+        const mirroredUrl = await mirrorImageToStorage(originalUrl);
+        if (mirroredUrl !== originalUrl) {
+            updatedHtml = updatedHtml.split(originalUrl).join(mirroredUrl);
+        }
+    }
+
+    return updatedHtml;
+}
+
 function sanitizeForFirestore(data) {
     Object.keys(data).forEach((key) => {
         if (data[key] === undefined) {
@@ -471,12 +579,18 @@ async function processEntry(entry, logId, internalLogId) {
         category = inferCategoryFromContent(entry.title, rawExcerpt, originalContent);
     }
     const tags = [category];
-    const imageUrl = resolveImageUrl(entry, bodyBlocks);
+    const rawImageUrl = resolveImageUrl(entry, bodyBlocks);
+
+    // Mirror the featured image to Firebase Storage
+    const imageUrl = await mirrorImageToStorage(rawImageUrl);
+
+    // Mirror images embedded in article HTML content
+    const mirroredContent = await mirrorHtmlImages(originalContent);
 
     const baseArticleData = {
         title: entry.title || "Sin título",
         excerpt: rawExcerpt || "",
-        content: originalContent || rawExcerpt || "",
+        content: mirroredContent || rawExcerpt || "",
         category: category || "General",
         tags: tags || [],
         author: (entry.byline && entry.byline.length > 0) ? (entry.byline[0].text || "MIT Technology Review") : "MIT Technology Review",
@@ -499,11 +613,16 @@ async function processEntry(entry, logId, internalLogId) {
             bodyBlocks,
         });
 
+        // Mirror images in translated content too (translator preserves URLs)
+        const finalContent = translatedFields.translatedContent
+            ? await mirrorHtmlImages(translatedFields.translatedContent)
+            : baseArticleData.content;
+
         const articleData = sanitizeForFirestore({
             ...baseArticleData,
             title: translatedFields.translatedTitle || baseArticleData.title,
             excerpt: translatedFields.translatedExcerpt || baseArticleData.excerpt,
-            content: translatedFields.translatedContent || baseArticleData.content,
+            content: finalContent,
             status: baseArticleData.publicationStatus,
             language: "es",
             translation: buildTranslationMetadata(TRANSLATION_STATUS.TRANSLATED),

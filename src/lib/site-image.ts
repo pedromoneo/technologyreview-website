@@ -18,6 +18,10 @@ function isUnsplashHost(hostname: string) {
     return hostname === "images.unsplash.com" || hostname.endsWith(".unsplash.com");
 }
 
+function isFirebaseStorageHost(hostname: string) {
+    return hostname === "firebasestorage.googleapis.com" || hostname === "storage.googleapis.com";
+}
+
 export function isWordPressAttachmentPageUrl(src: string) {
     if (!src || src.startsWith("/")) return false;
 
@@ -54,7 +58,7 @@ export function canUseDirectResponsiveImage(src: string) {
 
     try {
         const url = new URL(src);
-        return isTechReviewHost(url.hostname) || isUnsplashHost(url.hostname);
+        return isTechReviewHost(url.hostname) || isUnsplashHost(url.hostname) || isFirebaseStorageHost(url.hostname);
     } catch {
         return false;
     }
@@ -82,6 +86,10 @@ export function siteImageLoader({ src, width, quality }: ImageLoaderProps) {
             url.searchParams.set("auto", "format");
             url.searchParams.set("fit", url.searchParams.get("fit") || "crop");
             return url.toString();
+        }
+
+        if (isFirebaseStorageHost(url.hostname)) {
+            return src;
         }
 
         return src;

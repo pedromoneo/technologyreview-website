@@ -3,8 +3,8 @@ import ArticleCard from "@/components/home/ArticleCard";
 import { notFound } from "next/navigation";
 import SiteImage from "@/components/SiteImage";
 import ViewTracker from "@/components/ViewTracker";
+import { DEFAULT_ARTICLE_IMAGE } from "@/lib/site-image";
 
-export const dynamic = "force-dynamic";
 export const revalidate = 3600; // 1 hour cache for informe pages
 
 interface InformePageProps {
@@ -52,7 +52,7 @@ export default async function InformePage({ params }: InformePageProps) {
                 author: data.author || "Redacción",
                 date: data.date || "",
                 readingTime: data.readingTime || "1 min",
-                imageUrl: data.imageUrl || "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&q=80&w=800",
+                imageUrl: data.imageUrl || DEFAULT_ARTICLE_IMAGE,
                 category: data.category || "General",
                 publishedAt: data.publishedAt
             };
@@ -68,7 +68,7 @@ export default async function InformePage({ params }: InformePageProps) {
             {/* Hero Section */}
             <div className="relative h-[60vh] min-h-[400px] w-full overflow-hidden bg-primary">
                 <SiteImage
-                    src={informeData.imageUrl || "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&q=80&w=1600"}
+                    src={informeData.imageUrl || DEFAULT_ARTICLE_IMAGE}
                     alt={informeData.title}
                     fill
                     className="object-cover opacity-60"

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import SiteImage from "@/components/SiteImage";
 import { getArticlePath } from "@/lib/article-url";
+import { DEFAULT_ARTICLE_IMAGE } from "@/lib/site-image";
 
 interface Article {
     id: string;
@@ -128,7 +129,7 @@ export default function ArticleCollection({ collection, articles }: ArticleColle
 
                         <div className="relative aspect-[16/10] overflow-hidden">
                             <SiteImage
-                                src={article.imageUrl || "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&q=80&w=800"}
+                                src={article.imageUrl || DEFAULT_ARTICLE_IMAGE}
                                 alt={article.title}
                                 fill
                                 loading="lazy"

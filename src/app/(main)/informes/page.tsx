@@ -1,8 +1,8 @@
 import { db } from "@/lib/firebase-admin";
 import Link from "next/link";
 import SiteImage from "@/components/SiteImage";
+import { DEFAULT_ARTICLE_IMAGE } from "@/lib/site-image";
 
-export const dynamic = "force-dynamic";
 export const revalidate = 3600;
 
 export const metadata = {
@@ -58,7 +58,7 @@ export default async function InformesPage() {
                             >
                                 <div className="relative aspect-[16/10] overflow-hidden bg-gray-100">
                                     <SiteImage
-                                        src={informe.imageUrl || "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&q=80&w=800"}
+                                        src={informe.imageUrl || DEFAULT_ARTICLE_IMAGE}
                                         alt={informe.title}
                                         fill
                                         loading="lazy"

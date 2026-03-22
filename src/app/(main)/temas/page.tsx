@@ -2,7 +2,6 @@ import { db } from "@/lib/firebase-admin";
 import Link from "next/link";
 import { slugify } from "@/lib/content-utils";
 
-export const dynamic = "force-dynamic";
 export const revalidate = 3600;
 
 export default async function TemasPage() {
