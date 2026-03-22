@@ -73,7 +73,6 @@ export default async function InformePage({ params }: InformePageProps) {
                     fill
                     className="object-cover opacity-60"
                     priority
-                    quality={100}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-primary via-primary/20 to-transparent" />
 

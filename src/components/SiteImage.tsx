@@ -8,7 +8,7 @@ import {
     getSafeSiteImageSrc,
 } from "@/lib/site-image";
 
-export default function SiteImage({ alt, src, onError, quality = 90, ...props }: ImageProps) {
+export default function SiteImage({ alt, src, onError, ...props }: ImageProps) {
     const normalizedSrc = typeof src === "string"
         ? getSafeSiteImageSrc(src)
         : src;
@@ -24,7 +24,6 @@ export default function SiteImage({ alt, src, onError, quality = 90, ...props }:
         <Image
             alt={alt}
             src={currentSrc}
-            quality={quality}
             {...props}
             {...getDirectImageLoaderProps(srcValue)}
             onError={(event) => {
