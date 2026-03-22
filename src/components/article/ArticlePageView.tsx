@@ -82,6 +82,7 @@ export default function ArticlePageView({ article, relatedArticles }: ArticlePag
                             fill
                             className="object-cover transition-transform duration-700 group-hover:scale-105"
                             priority
+                            quality={100}
                             sizes="(max-width: 768px) 100vw, 800px"
                         />
                         <div className="absolute inset-0 ring-1 ring-inset ring-black/10 pointer-events-none" />
