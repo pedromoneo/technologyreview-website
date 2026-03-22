@@ -69,7 +69,7 @@ export async function GET(request: Request) {
             };
 
             if (imageUrl) {
-                item.enclosure = { url: imageUrl, type: imageType };
+                item.enclosure = { url: imageUrl, type: imageType, size: 100000 };
                 item.custom_elements.push({
                     'media:content': {
                         _attr: {
